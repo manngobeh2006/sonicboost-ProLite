@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabase';
 
 // Backend API configuration
 // In Vibecode, use the public backend URL that's exposed through the proxy
@@ -8,47 +8,23 @@ const API_URL = __DEV__
   ? VIBECODE_BACKEND_URL || 'http://172.17.0.2:3000/api'  // Use Vibecode proxy URL or fallback
   : 'https://your-backend.com/api'; // Production
 
-console.log('🔧 Backend URL configured:', API_URL);
-
-// Token storage key
-const TOKEN_KEY = 'auth_token';
+if (__DEV__) {
+  console.log('🔧 Backend URL configured:', API_URL);
+}
 
 /**
  * API Client for SonicBoost ProLite backend
+ * Uses Supabase Auth for authentication
  */
 class APIClient {
-  private token: string | null = null;
-
-  constructor() {
-    this.loadToken();
-  }
-
-  // Load token from storage
-  async loadToken() {
+  // Get current Supabase auth token
+  async getToken(): Promise<string | null> {
     try {
-      this.token = await AsyncStorage.getItem(TOKEN_KEY);
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.access_token || null;
     } catch (error) {
-      console.error('Failed to load token:', error);
-    }
-  }
-
-  // Save token to storage
-  async saveToken(token: string) {
-    try {
-      this.token = token;
-      await AsyncStorage.setItem(TOKEN_KEY, token);
-    } catch (error) {
-      console.error('Failed to save token:', error);
-    }
-  }
-
-  // Clear token from storage
-  async clearToken() {
-    try {
-      this.token = null;
-      await AsyncStorage.removeItem(TOKEN_KEY);
-    } catch (error) {
-      console.error('Failed to clear token:', error);
+      console.error('Failed to get token:', error);
+      return null;
     }
   }
 
@@ -59,13 +35,16 @@ class APIClient {
       ...(options.headers as Record<string, string>),
     };
 
-    // Add auth token if available
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+    // Add auth token from Supabase if available
+    const token = await this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
-    console.log(`🌐 Making request to: ${API_URL}${endpoint}`);
-    console.log(`📤 Request data:`, options.body);
+    if (__DEV__) {
+      console.log(`🌐 Making request to: ${API_URL}${endpoint}`);
+      console.log(`📤 Request data:`, options.body);
+    }
 
     try {
       // Create timeout promise
@@ -82,8 +61,10 @@ class APIClient {
         timeoutPromise
       ]) as Response;
 
-      console.log(`📥 Response status: ${response.status}`);
-      console.log(`📥 Response content-type: ${response.headers.get('content-type')}`);
+      if (__DEV__) {
+        console.log(`📥 Response status: ${response.status}`);
+        console.log(`📥 Response content-type: ${response.headers.get('content-type')}`);
+      }
 
       // Check if response is JSON
       const contentType = response.headers.get('content-type');
@@ -94,7 +75,10 @@ class APIClient {
       }
 
       const data = await response.json();
-      console.log(`📥 Response data:`, data);
+      
+      if (__DEV__) {
+        console.log(`📥 Response data:`, data);
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Request failed');
@@ -117,42 +101,7 @@ class APIClient {
     }
   }
 
-  // Authentication endpoints
-  async register(email: string, password: string, name: string) {
-    const data = await this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, name }),
-    });
-
-    if (data.token) {
-      await this.saveToken(data.token);
-    }
-
-    return data;
-  }
-
-  async login(email: string, password: string) {
-    const data = await this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (data.token) {
-      await this.saveToken(data.token);
-    }
-
-    return data;
-  }
-
-  async logout() {
-    await this.clearToken();
-  }
-
-  async getCurrentUser() {
-    return await this.request('/auth/me');
-  }
-
-  // Subscription endpoints
+  // Subscription endpoints (Auth handled by Supabase)
   async createCheckoutSession(priceId: string) {
     return await this.request('/stripe/create-checkout-session', {
       method: 'POST',
