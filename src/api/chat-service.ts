@@ -144,3 +144,101 @@ export const getGrokTextResponse = async (messages: AIMessage[], options?: AIReq
 export const getGrokChatResponse = async (prompt: string): Promise<AIResponse> => {
   return await getGrokTextResponse([{ role: "user", content: prompt }]);
 };
+
+/**
+ * Get a text response from GPT-MINI (gpt-5-mini)
+ * Uses fetch API directly as per Vibecode integration
+ * @param messages - The messages to send to the AI
+ * @param options - The options for the request
+ * @returns The response from the AI
+ */
+export const getGPTMiniTextResponse = async (
+  messages: AIMessage[],
+  options?: AIRequestOptions
+): Promise<AIResponse> => {
+  try {
+    const apiKey = process.env.EXPO_PUBLIC_VIBECODE_OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key not found');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // Changed from gpt-5-mini to gpt-4o-mini which is more stable
+        messages: messages,
+        max_tokens: options?.maxTokens || 1000,
+        temperature: options?.temperature || 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('GPT-MINI API Error Response:', errorText);
+      throw new Error(`GPT-MINI API request failed: ${response.status} - ${errorText}`);
+    }
+
+    const responseText = await response.text();
+
+    // Validate we got a response
+    if (!responseText || responseText.trim() === '') {
+      console.error('GPT-MINI returned empty response');
+      throw new Error('Empty response from GPT-MINI API');
+    }
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse GPT-MINI response:', responseText.substring(0, 200));
+      throw new Error('Invalid JSON response from GPT-MINI API');
+    }
+
+    const message = data.choices?.[0]?.message;
+    const content = message?.content || '';
+    const refusal = message?.refusal;
+    const finishReason = data.choices?.[0]?.finish_reason;
+
+    // Check if the request was refused
+    if (refusal) {
+      console.error('GPT-4o-mini refused request:', refusal);
+      throw new Error(`GPT-4o-mini refused: ${refusal}`);
+    }
+
+    // Check for empty content (common with reasoning models)
+    if (!content || content.trim() === '') {
+      // Log once with minimal detail - this is expected behavior for some requests
+      if (finishReason === 'length') {
+        console.log('AI response truncated, using fallback');
+      } else {
+        console.log('AI response empty, using fallback');
+      }
+      throw new Error('No content in GPT-4o-mini response');
+    }
+
+    return {
+      content,
+      usage: {
+        promptTokens: data.usage?.prompt_tokens || 0,
+        completionTokens: data.usage?.completion_tokens || 0,
+        totalTokens: data.usage?.total_tokens || 0,
+      },
+    };
+  } catch (error) {
+    console.error('GPT-MINI API Error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a simple chat response from GPT-MINI
+ * @param prompt - The prompt to send to the AI
+ * @returns The response from the AI
+ */
+export const getGPTMiniChatResponse = async (prompt: string): Promise<AIResponse> => {
+  return await getGPTMiniTextResponse([{ role: "user", content: prompt }]);
+};

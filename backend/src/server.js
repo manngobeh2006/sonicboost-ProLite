@@ -4,7 +4,19 @@ const bodyParser = require('body-parser');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
-const pool = require('./db');
+// Database connection (optional for development)
+let pool;
+try {
+  pool = require('./db');
+} catch (error) {
+  console.log('⚠️  Database not available - using mock database');
+  pool = require('./db-mock');
+}
+
+// Helper function for database queries
+const dbQuery = async (query, params = []) => {
+  return await pool.query(query, params);
+};
 const { hashPassword, comparePassword, generateToken, authenticateRequest } = require('./auth');
 
 const app = express();
@@ -46,7 +58,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Check if user already exists
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    const existing = await dbQuery('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
     
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Email already exists' });
@@ -56,7 +68,7 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await hashPassword(password);
 
     // Create user
-    const result = await pool.query(
+    const result = await dbQuery(
       `INSERT INTO users (email, password_hash, name) 
        VALUES ($1, $2, $3) 
        RETURNING id, email, name, subscription_status, subscription_tier, created_at`,
@@ -95,7 +107,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Get user
-    const result = await pool.query(
+    const result = await dbQuery(
       'SELECT id, email, name, password_hash, subscription_status, subscription_tier, stripe_customer_id, created_at FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
@@ -163,7 +175,7 @@ app.post('/api/stripe/create-checkout-session', authenticateRequest, async (req,
     // Create or get Stripe customer
     let customerId = null;
     
-    const dbUser = await pool.query('SELECT stripe_customer_id FROM users WHERE id = $1', [user.id]);
+    const dbUser = await dbQuery('SELECT stripe_customer_id FROM users WHERE id = $1', [user.id]);
     customerId = dbUser.rows[0].stripe_customer_id;
 
     if (!customerId) {
@@ -176,7 +188,7 @@ app.post('/api/stripe/create-checkout-session', authenticateRequest, async (req,
       customerId = customer.id;
 
       // Save customer ID
-      await pool.query('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [customerId, user.id]);
+      await dbQuery('UPDATE users SET stripe_customer_id = $1 WHERE id = $2', [customerId, user.id]);
     }
 
     // Create checkout session
@@ -213,7 +225,7 @@ app.post('/api/stripe/create-portal-session', authenticateRequest, async (req, r
   try {
     const user = req.user;
     
-    const dbUser = await pool.query('SELECT stripe_customer_id FROM users WHERE id = $1', [user.id]);
+    const dbUser = await dbQuery('SELECT stripe_customer_id FROM users WHERE id = $1', [user.id]);
     const customerId = dbUser.rows[0].stripe_customer_id;
 
     if (!customerId) {
@@ -240,7 +252,7 @@ app.get('/api/subscription/status', authenticateRequest, async (req, res) => {
   try {
     const user = req.user;
 
-    const result = await pool.query(
+    const result = await dbQuery(
       `SELECT s.*, u.masters_this_month, u.subscription_tier
        FROM subscriptions s
        JOIN users u ON s.user_id = u.id
@@ -254,7 +266,7 @@ app.get('/api/subscription/status', authenticateRequest, async (req, res) => {
       return res.json({
         success: true,
         subscription: null,
-        tier: 'free',
+        tier: 'trial',
         mastersThisMonth: user.masters_this_month || 0,
       });
     }
@@ -288,7 +300,7 @@ app.get('/api/usage/check-limit', authenticateRequest, async (req, res) => {
     const user = req.user;
 
     // Get user's current usage
-    const result = await pool.query(
+    const result = await dbQuery(
       'SELECT subscription_tier, masters_this_month, last_reset_date FROM users WHERE id = $1',
       [user.id]
     );
@@ -297,14 +309,15 @@ app.get('/api/usage/check-limit', authenticateRequest, async (req, res) => {
 
     // Define limits per tier
     const limits = {
-      free: 1, // Free trial: 1 master only
-      pro: 999999, // Pro: Unlimited
+      trial: 0, // Trial users can preview but not download
+      pro: 999999, // Pro: Unlimited downloads
+      enterprise: 999999, // Enterprise: Unlimited downloads
     };
 
-    const tier = userData.subscription_tier || 'free';
-    const limit = limits[tier];
+    const tier = userData.subscription_tier || 'trial';
+    const limit = limits[tier] || 0;
     const used = userData.masters_this_month || 0;
-    const canMaster = used < limit;
+    const canMaster = tier !== 'trial' && used < limit;
 
     res.json({
       success: true,
@@ -328,27 +341,31 @@ app.post('/api/usage/increment', authenticateRequest, async (req, res) => {
     const user = req.user;
 
     // Check limit first
-    const checkResult = await pool.query(
+    const checkResult = await dbQuery(
       'SELECT subscription_tier, masters_this_month FROM users WHERE id = $1',
       [user.id]
     );
 
     const userData = checkResult.rows[0];
-    const limits = { free: 1, pro: 999999 }; // Free: 1 master, Pro: unlimited
-    const limit = limits[userData.subscription_tier || 'free'];
+    const limits = { trial: 0, pro: 999999, enterprise: 999999 }; // Trial: no downloads, Pro/Enterprise: unlimited
+    const limit = limits[userData.subscription_tier || 'trial'];
+
+    if (userData.subscription_tier === 'trial') {
+      return res.status(403).json({ error: 'Payment required to download. Please subscribe to continue.' });
+    }
 
     if (userData.masters_this_month >= limit) {
       return res.status(403).json({ error: 'Monthly limit reached' });
     }
 
     // Increment counter
-    await pool.query(
+    await dbQuery(
       'UPDATE users SET masters_this_month = masters_this_month + 1, masters_total = masters_total + 1 WHERE id = $1',
       [user.id]
     );
 
     // Log the audio file
-    await pool.query(
+    await dbQuery(
       `INSERT INTO audio_files (user_id, original_filename, genre, tempo, duration)
        VALUES ($1, $2, $3, $4, $5)`,
       [user.id, filename, genre, tempo, duration]
@@ -369,7 +386,7 @@ app.get('/api/usage/history', authenticateRequest, async (req, res) => {
   try {
     const user = req.user;
 
-    const result = await pool.query(
+    const result = await dbQuery(
       `SELECT id, original_filename, genre, tempo, duration, status, created_at
        FROM audio_files
        WHERE user_id = $1
@@ -457,13 +474,13 @@ async function handleCheckoutSessionCompleted(session) {
   const tier = 'pro';
 
   // Update user
-  await pool.query(
+  await dbQuery(
     'UPDATE users SET stripe_customer_id = $1, subscription_status = $2, subscription_tier = $3 WHERE id = $4',
     [customerId, subscription.status, tier, userId]
   );
 
   // Create subscription record
-  await pool.query(
+  await dbQuery(
     `INSERT INTO subscriptions (user_id, stripe_subscription_id, stripe_price_id, status, current_period_start, current_period_end)
      VALUES ($1, $2, $3, $4, to_timestamp($5), to_timestamp($6))
      ON CONFLICT (stripe_subscription_id) DO UPDATE SET
@@ -488,7 +505,7 @@ async function handleSubscriptionUpdate(subscription) {
   const tier = 'pro';
 
   // Update subscription
-  await pool.query(
+  await dbQuery(
     `UPDATE subscriptions SET
        status = $1,
        current_period_start = to_timestamp($2),
@@ -505,7 +522,7 @@ async function handleSubscriptionUpdate(subscription) {
   );
 
   // Update user
-  await pool.query(
+  await dbQuery(
     `UPDATE users SET
        subscription_status = $1,
        subscription_tier = $2
@@ -520,13 +537,13 @@ async function handleSubscriptionDeleted(subscription) {
   console.log('❌ Subscription deleted:', subscriptionId);
 
   // Update subscription
-  await pool.query(
+  await dbQuery(
     "UPDATE subscriptions SET status = 'canceled' WHERE stripe_subscription_id = $1",
     [subscriptionId]
   );
 
   // Update user to free tier
-  await pool.query(
+  await dbQuery(
     "UPDATE users SET subscription_status = 'canceled', subscription_tier = 'free' WHERE stripe_customer_id = $1",
     [subscription.customer]
   );
@@ -535,11 +552,13 @@ async function handleSubscriptionDeleted(subscription) {
 async function handlePaymentFailed(invoice) {
   console.log('❌ Payment failed for subscription:', invoice.subscription);
   
-  // Update user status
-  await pool.query(
-    "UPDATE users SET subscription_status = 'past_due' WHERE stripe_customer_id = $1",
-    [invoice.customer]
-  );
+  // Update user status (if database available)
+  if (pool) {
+    await dbQuery(
+      "UPDATE users SET subscription_status = 'past_due' WHERE stripe_customer_id = $1",
+      [invoice.customer]
+    );
+  }
 }
 
 // ============================================
@@ -556,7 +575,7 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`
-  🚀 Clickmaster ProLite Backend Server
+  🚀 SonicBoost ProLite Backend Server
   ================================
   Port: ${PORT}
   Environment: ${process.env.NODE_ENV || 'development'}

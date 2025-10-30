@@ -10,42 +10,55 @@ import { RootStackParamList } from '../navigation/types';
 
 type SubscriptionsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Subscriptions'>;
 
-// IMPORTANT: Replace with your actual Stripe Price ID from your backend .env
-const STRIPE_PRICE_ID_PRO = process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_PRO || 'price_pro_placeholder';
+// Real Stripe Price IDs
+const STRIPE_PRICE_ID_SINGLE = 'price_1SLC6tRWPNzpeJiuYVKtG87S'; // One-time payment
+const STRIPE_PRICE_ID_PRO = 'price_1SLCDtRWPNzpeJiuh09ZNfrp'; // Monthly subscription
 
 const PLANS = [
   {
-    id: 'free',
-    name: 'Free Trial',
+    id: 'trial',
+    name: 'Free Preview',
     price: '$0',
-    period: '/3 days',
+    period: 'forever',
     priceId: null,
     features: [
-      '1 master only',
-      'Premium quality',
-      'MP3 export only',
-      'No download history',
-      'No tempo analysis',
-      'No reference song upload',
-      'Basic support',
+      'Preview boosted audio',
+      'Compare before & after',
+      'No downloads (preview only)',
+      'Full audio enhancement',
+      'All genres supported',
+      'Instant processing',
+    ],
+  },
+  {
+    id: 'single',
+    name: 'One-Time Boost',
+    price: '$4.99',
+    period: 'one-time',
+    priceId: STRIPE_PRICE_ID_SINGLE,
+    features: [
+      'Download this enhanced file',
+      'MP3 + WAV export',
+      'One-time payment',
+      'No subscription required',
+      'All audio enhancement features',
+      'Keep your enhanced audio forever',
     ],
   },
   {
     id: 'pro',
-    name: 'Pro',
-    price: '$9.99',
+    name: 'SonicBoost Pro',
+    price: '$4.99',
     period: '/month',
     priceId: STRIPE_PRICE_ID_PRO,
     popular: true,
     features: [
-      'Unlimited masters',
-      'Premium quality',
+      'Unlimited downloads',
       'MP3 + WAV export',
       'Download history access',
-      'Tempo analysis',
-      'Reference song upload',
-      'Advanced genre detection',
+      'All audio enhancement features',
       'Priority support',
+      'Cancel anytime',
     ],
   },
 ];
@@ -75,7 +88,25 @@ export default function SubscriptionsScreen() {
       }
     } catch (error: any) {
       console.error('Subscription error:', error);
-      Alert.alert('Error', error.message || 'Failed to start subscription. Please try again.');
+
+      // Check if it's a backend error (not running or misconfigured)
+      if (error.message?.includes('Network request failed') ||
+          error.message?.includes('fetch') ||
+          error.message?.includes('Backend returned non-JSON') ||
+          error.message?.includes('backend server may be offline') ||
+          error.message?.includes('Cannot connect to backend')) {
+        Alert.alert(
+          'Backend Offline',
+          'The backend server is not running. Subscriptions require a live backend connection.\n\n' +
+          'For testing: The app works without the backend, but payment features need the server running.\n\n' +
+          'To start the backend:\n' +
+          '1. Configure backend/.env with your database and Stripe keys\n' +
+          '2. Run: cd backend && npm install && npm start',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Error', error.message || 'Failed to start subscription. Please try again.');
+      }
     } finally {
       setLoading(null);
     }
@@ -114,9 +145,9 @@ export default function SubscriptionsScreen() {
                 Current Plan: {getCurrentPlan().toUpperCase()}
               </Text>
             </View>
-            {user.mastersThisMonth !== undefined && (
+            {user.enhancementsThisMonth !== undefined && (
               <Text className="text-gray-400 text-xs mt-2">
-                {user.mastersThisMonth} masters used this month
+                {user.enhancementsThisMonth} enhancements used this month
               </Text>
             )}
           </View>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, Modal, Linking, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,9 +7,11 @@ import { Audio, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../state/authStore';
+import { apiClient } from '../api/backend';
 import { useAudioStore } from '../state/audioStore';
 import { RootStackParamList } from '../navigation/types';
-import { createMasteredSound, createOriginalSound, getGenreDisplayName, AudioGenre } from '../utils/audioProcessing';
+import { createMasteredSound, createOriginalSound, getGenreDisplayName, AudioGenre, analyzeAudioFile, calculateIntelligentMastering, processAudioFile } from '../utils/audioProcessing';
+import { parseAudioCommand, applyAudioCommand } from '../utils/audioAI';
 
 type ResultsScreenRouteProp = RouteProp<RootStackParamList, 'Results'>;
 type ResultsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Results'>;
@@ -32,6 +34,10 @@ export default function ResultsScreen() {
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [showRevisionModal, setShowRevisionModal] = useState(false);
+  const [revisionCommand, setRevisionCommand] = useState('');
+  const [isRunningRevision, setIsRunningRevision] = useState(false);
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
 
@@ -172,10 +178,24 @@ export default function ResultsScreen() {
   const handleDownload = async (format: 'mp3' | 'wav') => {
     if (!file) return;
 
-    // Check if user is trying to download WAV without Pro
-    if (format === 'wav' && !isPro) {
-      setShowUpgradeModal(true);
-      return;
+    // Check if user has subscription or a paid one-time order for this file
+    if (!isPro) {
+      try {
+        const auth = await apiClient.authorizeDownload({ filename: file.originalFileName });
+        if (!auth?.allowed) {
+          setShowUpgradeModal(true);
+          return;
+        }
+      } catch (e: any) {
+        // If backend is offline, allow free users to download (graceful degradation)
+        if (e?.message?.includes('Backend returned non-JSON') || e?.message?.includes('Cannot connect')) {
+          console.warn('Backend offline, allowing download anyway');
+          // Continue to download
+        } else {
+          setShowUpgradeModal(true);
+          return;
+        }
+      }
     }
 
     const uri = format === 'mp3' ? file.masteredMp3Uri : file.masteredWavUri;
@@ -193,12 +213,72 @@ export default function ResultsScreen() {
 
       await Sharing.shareAsync(uri, {
         mimeType: format === 'mp3' ? 'audio/mpeg' : 'audio/wav',
-        dialogTitle: `Download Mastered Audio (${format.toUpperCase()})`,
+        dialogTitle: `Download Enhanced Audio (${format.toUpperCase()})`,
         UTI: format === 'mp3' ? 'public.mp3' : 'public.wav',
       });
     } catch (error) {
       console.error('Error sharing file:', error);
       Alert.alert('Error', 'Failed to download file');
+    }
+  };
+
+  const startOneTimePurchase = async () => {
+    if (!file) return;
+    try {
+      setIsCreatingCheckout(true);
+      // Configurable one-time price (default $4.99)
+      const fromEnv = Number(process.env.EXPO_PUBLIC_ONE_TIME_PRICE_CENTS || '499');
+      const amountCents = Number.isFinite(fromEnv) && fromEnv >= 100 ? fromEnv : 499;
+      const resp = await apiClient.createOneTimeCheckout({ filename: file.originalFileName, amountCents });
+      if (resp?.url) {
+        await Linking.openURL(resp.url);
+      } else {
+        Alert.alert('Error', 'Failed to start checkout.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || 'Failed to start checkout');
+    } finally {
+      setIsCreatingCheckout(false);
+    }
+  };
+
+  const runRevision = async () => {
+    if (!file) return;
+    if (!revisionCommand.trim()) {
+      Alert.alert('Enter a command', 'Describe how you want the sound adjusted.');
+      return;
+    }
+
+    try {
+      setIsRunningRevision(true);
+      // Analyze (or reuse if stored later)
+      const analysis = await analyzeAudioFile(file.masteredUri || file.originalUri, file.originalFileName);
+      // Base settings
+      const base = calculateIntelligentMastering(analysis);
+      const cmd = await parseAudioCommand(revisionCommand);
+      if (cmd.type === 'unknown') {
+        Alert.alert('Not understood', cmd.description);
+        setIsRunningRevision(false);
+        return;
+      }
+      const newSettings = applyAudioCommand(base, cmd);
+
+      // Re-process into new mastered files (overwrite existing URIs)
+      const mp3Uri = file.masteredMp3Uri || file.masteredUri;
+      const wavUri = file.masteredWavUri || file.masteredUri;
+      if (mp3Uri) await processAudioFile(file.originalUri, mp3Uri, newSettings);
+      if (wavUri) await processAudioFile(file.originalUri, wavUri, newSettings);
+
+      // Mark revision used
+      // @ts-ignore store has this field
+      useAudioStore.getState().updateFile(file.id, { masteringSettings: newSettings, revisionUsed: true });
+
+      setShowRevisionModal(false);
+      Alert.alert('Revision applied', 'Your audio was updated with your requested changes.');
+    } catch (e: any) {
+      Alert.alert('Revision failed', e?.message || 'Could not apply revision.');
+    } finally {
+      setIsRunningRevision(false);
     }
   };
 
@@ -228,7 +308,7 @@ export default function ResultsScreen() {
         <View className="mx-6 mb-6 bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex-row items-center">
           <Ionicons name="checkmark-circle" size={24} color="#10B981" />
           <Text className="text-green-400 text-sm font-semibold ml-3">
-            Your audio has been mastered successfully!
+            Your audio has been enhanced successfully!
           </Text>
         </View>
 
@@ -261,7 +341,7 @@ export default function ResultsScreen() {
                   currentVersion === 'mastered' ? 'text-white' : 'text-gray-400'
                 }`}
               >
-                Mastered
+                Enhanced
               </Text>
             </Pressable>
           </View>
@@ -290,8 +370,21 @@ export default function ResultsScreen() {
               {file.originalFileName}
             </Text>
             <Text className="text-gray-400 text-sm text-center mb-6">
-              {currentVersion === 'original' ? 'Original Version' : 'Mastered Version'}
+              {currentVersion === 'original' ? 'Original Version' : 'Enhanced Version'}
             </Text>
+
+            {/* Tempo Display */}
+            {file?.tempo && file.tempo > 0 && (
+              <View className="mb-4">
+                <View className="bg-gray-800/50 rounded-xl p-3 mx-6">
+                  <View className="flex-row items-center justify-center">
+                    <Ionicons name="musical-notes" size={16} color="#9333EA" />
+                    <Text className="text-gray-300 text-sm ml-2">Tempo: </Text>
+                    <Text className="text-white text-sm font-semibold">{file.tempo} BPM</Text>
+                  </View>
+                </View>
+              </View>
+            )}
 
             {/* Progress Bar */}
             <View className="mb-6">
@@ -335,7 +428,7 @@ export default function ResultsScreen() {
           </View>
         </View>
 
-        {/* Enhancement Info - Only show for mastered version */}
+        {/* Enhancement Info - Only show for enhanced version */}
         {currentVersion === 'mastered' && (
           <View className="mx-6 mb-6 bg-purple-600/10 border border-purple-600/30 rounded-2xl p-4">
             {/* Genre Detection */}
@@ -348,7 +441,7 @@ export default function ResultsScreen() {
                       {getGenreDisplayName(file.genre as AudioGenre)}
                     </Text>
                   </View>
-                  {file?.tempo && file.tempo > 0 && isPro ? (
+                  {file?.tempo && file.tempo > 0 ? (
                     <View className="ml-4">
                       <Text className="text-purple-300 text-xs mb-1">Tempo</Text>
                       <Text className="text-white text-base font-semibold">{file.tempo} BPM</Text>
@@ -396,7 +489,7 @@ export default function ResultsScreen() {
 
         {/* Download Section */}
         <View className="mx-6 mb-6">
-          <Text className="text-white text-lg font-semibold mb-3">Download Mastered Audio</Text>
+          <Text className="text-white text-lg font-semibold mb-3">Download Enhanced Audio</Text>
           <View className="space-y-3">
             <Pressable
               onPress={() => handleDownload('mp3')}
@@ -430,15 +523,51 @@ export default function ResultsScreen() {
               <Ionicons name="chevron-forward" size={20} color="#6B7280" />
             </Pressable>
           </View>
+          {/* Restore Download authorization */}
+          {!isPro && (
+            <View className="mt-3">
+              <Pressable
+                onPress={async () => {
+                  try {
+                    const resp = await apiClient.authorizeDownload({ filename: file.originalFileName });
+                    if (resp?.allowed) {
+                      Alert.alert('Access restored', 'You can now download this file.');
+                    } else {
+                      setShowUpgradeModal(true);
+                    }
+                  } catch (e: any) {
+                    // If backend is offline, inform user but don't block
+                    if (e?.message?.includes('Backend returned non-JSON') || e?.message?.includes('Cannot connect')) {
+                      Alert.alert('Backend Unavailable', 'The backend is currently offline. You can still download your files.');
+                    } else {
+                      setShowUpgradeModal(true);
+                    }
+                  }
+                }}
+                className="bg-gray-800 rounded-2xl py-3 items-center border border-gray-700 active:opacity-80"
+              >
+                <Text className="text-white text-sm font-semibold">Restore Download Access</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
 
         {/* Quick Actions */}
         <View className="mx-6 mb-8">
+          {/* AI Revision (Pro) */}
+          {isPro && !file.revisionUsed && (
+            <Pressable
+              onPress={() => setShowRevisionModal(true)}
+              className="bg-blue-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
+            >
+              <Text className="text-white text-base font-semibold">AI Revision (1 per file)</Text>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => navigation.navigate('Home')}
             className="bg-purple-600 rounded-2xl py-4 items-center active:opacity-80"
           >
-            <Text className="text-white text-base font-semibold">Master Another File</Text>
+            <Text className="text-white text-base font-semibold">Boost Another File</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -460,10 +589,10 @@ export default function ResultsScreen() {
                 <Ionicons name="lock-closed" size={40} color="#9333EA" />
               </View>
               <Text className="text-white text-2xl font-bold mb-2 text-center">
-                Upgrade to Pro
+                Unlock Downloads
               </Text>
               <Text className="text-gray-400 text-sm text-center">
-                WAV export is a Pro feature. Upgrade now to unlock lossless audio exports and more.
+                Choose a subscription for unlimited downloads, or a one-time payment to download this specific file.
               </Text>
             </View>
 
@@ -490,7 +619,19 @@ export default function ResultsScreen() {
               }}
               className="bg-purple-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
             >
-              <Text className="text-white text-base font-semibold">Upgrade Now - $9.99/mo</Text>
+              <Text className="text-white text-base font-semibold">Subscribe - $4.99/mo</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={startOneTimePurchase}
+              disabled={isCreatingCheckout}
+              className="bg-gray-800 rounded-2xl py-4 items-center mb-3 active:opacity-80 border border-gray-700"
+            >
+              {isCreatingCheckout ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-white text-base font-semibold">Pay Once - $4.99</Text>
+              )}
             </Pressable>
 
             <Pressable
@@ -498,6 +639,39 @@ export default function ResultsScreen() {
               className="py-3 items-center"
             >
               <Text className="text-gray-400 text-sm">Maybe later</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Revision Modal */}
+      <Modal
+        visible={showRevisionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRevisionModal(false)}
+      >
+        <Pressable className="flex-1 bg-black/80 items-center justify-center px-6" onPress={() => setShowRevisionModal(false)}>
+          <Pressable className="bg-gray-900 rounded-3xl p-8 w-full max-w-sm border border-gray-800" onPress={(e) => e.stopPropagation()}>
+            <Text className="text-white text-xl font-bold mb-3 text-center">AI Revision</Text>
+            <Text className="text-gray-400 text-xs mb-4 text-center">Describe one change (e.g., "boost 2kHz by 3dB" or "more bass")</Text>
+            <TextInput
+              value={revisionCommand}
+              onChangeText={setRevisionCommand}
+              placeholder="e.g., increase brightness by 20%"
+              placeholderTextColor="#6B7280"
+              className="bg-gray-800 text-white px-4 py-3 rounded-xl mb-4"
+              editable={!isRunningRevision}
+            />
+            <Pressable
+              onPress={runRevision}
+              disabled={isRunningRevision || !revisionCommand.trim()}
+              className={`rounded-2xl py-4 items-center mb-2 ${isRunningRevision || !revisionCommand.trim() ? 'bg-gray-700' : 'bg-blue-600'}`}
+            >
+              {isRunningRevision ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Apply Revision</Text>}
+            </Pressable>
+            <Pressable onPress={() => setShowRevisionModal(false)} className="py-2 items-center">
+              <Text className="text-gray-400 text-sm">Cancel</Text>
             </Pressable>
           </Pressable>
         </Pressable>

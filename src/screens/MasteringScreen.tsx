@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Alert, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,7 +9,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useAuthStore } from '../state/authStore';
 import { useAudioStore } from '../state/audioStore';
 import { RootStackParamList } from '../navigation/types';
-import { processAudioFile, analyzeAudioFile, calculateIntelligentMastering, getGenreDisplayName, analyzeReferenceTrack, calculateReferenceBasedMastering } from '../utils/audioProcessing';
+import { processAudioFile, analyzeAudioFile, calculateIntelligentMastering, getGenreDisplayName, analyzeReferenceTrack, calculateReferenceBasedMastering, AudioAnalysis, MasteringSettings } from '../utils/audioProcessing';
+import { parseAudioCommand, applyAudioCommand, generateAudioAnalysisDescription, generateMixingTips, generatePreMasteringTips } from '../utils/audioAI';
 
 type MasteringScreenRouteProp = RouteProp<RootStackParamList, 'Mastering'>;
 type MasteringScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Mastering'>;
@@ -26,6 +27,15 @@ export default function MasteringScreen() {
   const [processing, setProcessing] = useState(false);
   const [currentStage, setCurrentStage] = useState<string>('');
   const [referenceTrack, setReferenceTrack] = useState<{uri: string, name: string} | null>(null);
+  const [audioAnalysis, setAudioAnalysis] = useState<AudioAnalysis | null>(null);
+  const [analysisDescription, setAnalysisDescription] = useState<string>('');
+  const [mixingTips, setMixingTips] = useState<string[]>([]);
+  const [preMasteringTips, setPreMasteringTips] = useState<string[]>([]);
+  const [customMasteringSettings, setCustomMasteringSettings] = useState<MasteringSettings | null>(null);
+  const [commandInput, setCommandInput] = useState('');
+  const [processingCommand, setProcessingCommand] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [loadingTips, setLoadingTips] = useState(false);
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
 
@@ -47,6 +57,60 @@ export default function MasteringScreen() {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleProcessAudioCommand = async () => {
+    if (!commandInput.trim()) return;
+
+    setProcessingCommand(true);
+    try {
+      const command = await parseAudioCommand(commandInput);
+
+      if (command.type === 'unknown') {
+        Alert.alert('Command not understood', command.description);
+        setProcessingCommand(false);
+        return;
+      }
+
+      // Apply the command to current or default settings
+      const baseSettings = customMasteringSettings || (audioAnalysis ? calculateIntelligentMastering(audioAnalysis) : {
+        volumeBoost: 0.8,
+        brightness: 0.7,
+        midRange: 0.7,
+        bassBoost: 0.6,
+        compression: 0.6,
+        pitchShift: 0.5,
+      });
+
+      const newSettings = applyAudioCommand(baseSettings, command);
+      setCustomMasteringSettings(newSettings);
+
+      Alert.alert('Command Applied', command.description);
+      setCommandInput('');
+    } catch (error) {
+      console.error('Error processing command:', error);
+      Alert.alert('Error', 'Failed to process command');
+    }
+    setProcessingCommand(false);
+  };
+
+  const loadAIInsights = async (analysis: AudioAnalysis) => {
+    setLoadingTips(true);
+    try {
+      // Generate all AI insights in parallel
+      const [description, mixing, preMastering] = await Promise.all([
+        generateAudioAnalysisDescription(analysis),
+        generateMixingTips(analysis, false),
+        generatePreMasteringTips(analysis),
+      ]);
+
+      setAnalysisDescription(description);
+      setMixingTips(mixing);
+      setPreMasteringTips(preMastering);
+    } catch (error) {
+      console.error('Error loading AI insights:', error);
+    }
+    setLoadingTips(false);
   };
 
   const handlePickReferenceTrack = async () => {
@@ -87,7 +151,7 @@ export default function MasteringScreen() {
 
       Alert.alert(
         'Reference Track Added',
-        `${refFile.name} will be analyzed and used to enhance your mastering.`
+        `${refFile.name} will be analyzed and used to enhance your audio.`
       );
     } catch (error) {
       console.error('Error picking reference track:', error);
@@ -95,7 +159,7 @@ export default function MasteringScreen() {
     }
   };
 
-  const simulateClickmasterProcessing = async () => {
+  const simulateSonicBoostProcessing = async () => {
     if (!file) return;
 
     setProcessing(true);
@@ -103,35 +167,44 @@ export default function MasteringScreen() {
 
     try {
       // Stage 1: Analyzing audio characteristics
-      setCurrentStage('Analyzing audio characteristics...');
+      setCurrentStage('Analyzing audio file...');
       for (let i = 0; i <= 20; i++) {
         await new Promise((resolve) => setTimeout(resolve, 80));
         updateFile(file.id, { progress: i });
       }
 
       // Analyze audio to detect genre, tempo, and characteristics
-      const audioAnalysis = await analyzeAudioFile(file.originalUri, file.originalFileName);
-      
+      const audioAnalysisResult = await analyzeAudioFile(file.originalUri, file.originalFileName);
+      setAudioAnalysis(audioAnalysisResult);
+
+      // Load AI insights in background (non-blocking)
+      loadAIInsights(audioAnalysisResult);
+
       // Calculate mastering settings
       let masteringSettings;
-      let stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysis.genre)}...`;
-      
-      if (referenceTrack) {
+      let stageMessage = `Enhancing clarity for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
+
+      if (customMasteringSettings) {
+        // Use custom settings from AI commands
+        masteringSettings = customMasteringSettings;
+        stageMessage = 'Applying your custom settings...';
+        console.log('Using custom AI-adjusted mastering settings');
+      } else if (referenceTrack) {
         // Reference-based mastering
         setCurrentStage('Analyzing reference track...');
         const referenceAnalysis = await analyzeReferenceTrack(referenceTrack.uri);
-        
+
         // Calculate reference-based mastering settings
-        masteringSettings = calculateReferenceBasedMastering(audioAnalysis, referenceAnalysis);
-        stageMessage = 'Matching reference characteristics...';
-        
+        masteringSettings = calculateReferenceBasedMastering(audioAnalysisResult, referenceAnalysis);
+        stageMessage = 'Matching reference sound...';
+
         console.log('Using reference-based mastering');
       } else {
         // Genre-based intelligent mastering
-        masteringSettings = calculateIntelligentMastering(audioAnalysis);
+        masteringSettings = calculateIntelligentMastering(audioAnalysisResult);
       }
-      
-      console.log('Detected genre:', audioAnalysis.genre, 'Tempo:', audioAnalysis.tempo);
+
+      console.log('Detected genre:', audioAnalysisResult.genre, 'Tempo:', audioAnalysisResult.tempo);
 
       // Stage 2: Processing tone and frequency
       setCurrentStage(stageMessage);
@@ -141,14 +214,14 @@ export default function MasteringScreen() {
       }
 
       // Stage 3: Adjusting dynamics and preserving vocals
-      setCurrentStage('Enhancing vocals and dynamics...');
+      setCurrentStage('Boosting loudness and dynamics...');
       for (let i = 51; i <= 75; i++) {
         await new Promise((resolve) => setTimeout(resolve, 80));
         updateFile(file.id, { progress: i });
       }
 
       // Stage 4: Finalizing
-      setCurrentStage('Finalizing and exporting...');
+      setCurrentStage('Finalizing audio boost...');
       for (let i = 76; i <= 90; i++) {
         await new Promise((resolve) => setTimeout(resolve, 80));
         updateFile(file.id, { progress: i });
@@ -179,8 +252,8 @@ export default function MasteringScreen() {
         masteredMp3Uri: mp3Uri,
         masteredWavUri: wavUri,
         completedAt: new Date().toISOString(),
-        genre: audioAnalysis.genre,
-        tempo: audioAnalysis.tempo,
+        genre: audioAnalysisResult.genre,
+        tempo: audioAnalysisResult.tempo,
         masteringSettings: masteringSettings,
       });
 
@@ -215,7 +288,7 @@ export default function MasteringScreen() {
           <Pressable onPress={() => navigation.goBack()} className="mr-4">
             <Ionicons name="arrow-back" size={24} color="white" />
           </Pressable>
-          <Text className="text-white text-2xl font-bold">Master Audio</Text>
+          <Text className="text-white text-2xl font-bold">Enhance Audio</Text>
         </View>
 
         {/* File Info Card */}
@@ -391,8 +464,8 @@ export default function MasteringScreen() {
                   </Text>
                   <Text className="text-gray-500 text-xs text-center">
                     {isPro 
-                      ? 'Upload a professionally mastered song to match its sonic characteristics'
-                      : 'Upgrade to Pro to unlock reference-based mastering'
+                      ? 'Upload a professionally enhanced reference song to match its sonic characteristics'
+                      : 'Upgrade to Pro to unlock reference-based enhancement'
                     }
                   </Text>
                 </View>
@@ -404,7 +477,7 @@ export default function MasteringScreen() {
                 <View className="flex-row items-start">
                   <Ionicons name="information-circle" size={20} color="#9333EA" />
                   <Text className="text-purple-300 text-xs ml-2 flex-1 leading-5">
-                    Your audio will be analyzed against the reference track and mastered to match its loudness, frequency balance, stereo width, and dynamics - but even better!
+                    Your audio will be analyzed against the reference track and enhanced to match its loudness, frequency balance, stereo width, and dynamics - but even better!
                   </Text>
                 </View>
               </View>
@@ -412,14 +485,16 @@ export default function MasteringScreen() {
           </View>
         )}
 
+        {/* AI Assistant removed from initial processing. Now available as post-processing revision in Results screen. */}
+
         {/* Start Button */}
         {file.status === 'uploaded' && !processing && (
           <View className="mx-6 mb-8">
             <Pressable
-              onPress={simulateClickmasterProcessing}
+              onPress={simulateSonicBoostProcessing}
               className="bg-purple-600 rounded-3xl py-5 items-center active:opacity-80"
             >
-              <Text className="text-white text-lg font-bold">Start Mastering</Text>
+              <Text className="text-white text-lg font-bold">Boost Audio</Text>
             </Pressable>
           </View>
         )}
@@ -429,7 +504,7 @@ export default function MasteringScreen() {
           <Text className="text-white text-lg font-semibold mb-4">What happens next?</Text>
           <View className="bg-gray-900 rounded-2xl p-5 border border-gray-800">
             <Text className="text-gray-400 text-sm leading-6">
-              Our AI-powered mastering engine will analyze your audio and apply professional-grade
+              Our AI-powered enhancement engine will analyze your audio and apply professional-grade
               processing to enhance tone, balance frequencies, optimize volume levels, and improve
               dynamics. This typically takes 1-2 minutes depending on file size.
             </Text>

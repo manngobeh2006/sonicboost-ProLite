@@ -91,9 +91,9 @@ export default function HomeScreen() {
       <ScrollView className="flex-1">
         {/* Header */}
         <View className="px-6 py-8">
-          <Text className="text-white text-3xl font-bold">Clickmaster ProLite</Text>
+          <Text className="text-white text-3xl font-bold">SonicBoost ProLite</Text>
           <Text className="text-gray-400 text-base mt-2">
-            Professional audio mastering at your fingertips
+            Boost clarity, depth, and loudness for a more powerful sound
           </Text>
         </View>
 
@@ -114,9 +114,9 @@ export default function HomeScreen() {
                 <View className="w-20 h-20 bg-white/20 rounded-full items-center justify-center mb-4">
                   <Ionicons name="cloud-upload" size={40} color="white" />
                 </View>
-                <Text className="text-white text-xl font-bold mb-2">Upload Audio File</Text>
+                <Text className="text-white text-xl font-bold mb-2">Boost Your Audio</Text>
                 <Text className="text-purple-200 text-sm text-center">
-                  Tap to select an audio file from your device
+                  Tap to select an audio file and boost clarity, depth, and loudness
                 </Text>
                 <View className="flex-row items-center mt-4 bg-white/10 px-4 py-2 rounded-full">
                   <Ionicons name="musical-note" size={16} color="white" />
@@ -137,10 +137,10 @@ export default function HomeScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-white text-base font-semibold mb-1">
-                  AI-Powered Mastering
+                  Instant Audio Boost
                 </Text>
                 <Text className="text-gray-400 text-sm">
-                  Advanced algorithms optimize tone, frequency, and dynamics
+                  Enhance clarity, depth, and loudness with one click
                 </Text>
               </View>
             </View>
@@ -154,7 +154,7 @@ export default function HomeScreen() {
                   Before & After Preview
                 </Text>
                 <Text className="text-gray-400 text-sm">
-                  Compare original and mastered versions instantly
+                  Compare original and boosted versions instantly
                 </Text>
               </View>
             </View>
@@ -182,7 +182,7 @@ export default function HomeScreen() {
                   Processing History
                 </Text>
                 <Text className="text-gray-400 text-sm">
-                  Access all your mastered files anytime
+                  Access all your boosted files anytime
                 </Text>
               </View>
             </View>

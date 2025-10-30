@@ -1,9 +1,11 @@
-const pool = require('./db');
-
+// Use SQLite for development, PostgreSQL for production
 const initDatabase = async () => {
-  const client = await pool.connect();
-  
-  try {
+  if (process.env.NODE_ENV === 'production') {
+    // PostgreSQL initialization
+    const pool = require('./db');
+    const client = await pool.connect();
+    
+    try {
     console.log('🔧 Creating database tables...');
 
     // Users table
@@ -71,8 +73,13 @@ const initDatabase = async () => {
   } catch (error) {
     console.error('❌ Database initialization error:', error);
     throw error;
-  } finally {
-    client.release();
+    } finally {
+      client.release();
+    }
+  } else {
+    // SQLite initialization for development
+    const initSQLite = require('./init-db-sqlite');
+    await initSQLite();
   }
 };
 

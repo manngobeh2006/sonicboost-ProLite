@@ -1,548 +1,139 @@
-# Clickmaster ProLite Backend Server
+# SonicBoost ProLite Backend
 
-Complete backend server with Stripe integration and PostgreSQL database for the Clickmaster ProLite mobile app.
+Backend API for SonicBoost ProLite mobile app with authentication, subscription management, and usage tracking.
 
-## 🏗️ Architecture
+## Features
 
-```
-Mobile App → Backend API → PostgreSQL Database
-                ↓
-             Stripe API
-```
+- **Authentication**: JWT-based auth with bcrypt password hashing
+- **Subscription Management**: Stripe integration for Pro/Unlimited plans
+- **Usage Tracking**: Monitor mastering history and enforce limits
+- **Database**: PostgreSQL via Supabase
 
-## 📋 Features
+## Tech Stack
 
-- ✅ User authentication (JWT-based)
-- ✅ Stripe subscription management
-- ✅ Usage tracking and limits
-- ✅ Webhook handling for Stripe events
-- ✅ PostgreSQL database
-- ✅ Secure password hashing
-- ✅ CORS enabled for mobile app
+- Node.js + Express + TypeScript
+- Supabase (PostgreSQL)
+- Stripe for payments
+- JWT for authentication
 
-## 🚀 Quick Start
+## Setup Instructions
 
-### 1. Install Dependencies
+### 1. Create Supabase Project
 
-```bash
-cd backend
-npm install
-```
+1. Go to [supabase.com](https://supabase.com) and create a free account
+2. Create a new project
+3. Go to Project Settings > API
+4. Copy your **Project URL** and **service_role key** (not anon key!)
 
 ### 2. Set Up Database
 
-**Option A: Local PostgreSQL**
-```bash
-# Install PostgreSQL (if not installed)
-# macOS
-brew install postgresql
-brew services start postgresql
-
-# Ubuntu/Debian
-sudo apt-get install postgresql
-sudo service postgresql start
-
-# Create database
-createdb clickmaster_prolite
-```
-
-**Option B: Cloud Database (Recommended)**
-- [Supabase](https://supabase.com) - Free tier available
-- [Railway](https://railway.app) - Automatic PostgreSQL
-- [Heroku Postgres](https://www.heroku.com/postgres) - Free tier
-- [ElephantSQL](https://www.elephantsql.com) - Free tier
+1. In your Supabase project, go to SQL Editor
+2. Copy the contents of `schema.sql` and run it
+3. This creates the users and mastering_history tables
 
 ### 3. Configure Environment Variables
 
-```bash
-cp .env.example .env
-```
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
 
-Edit `.env` with your values:
+2. Fill in your credentials in `.env`:
+   ```
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_SERVICE_KEY=your_service_role_key_here
+   JWT_SECRET=generate_a_long_random_string_here
+   ```
 
-```env
-# Database
-DATABASE_URL=postgresql://username:password@localhost:5432/clickmaster_prolite
+3. Generate a secure JWT secret:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
 
-# Stripe (get from https://dashboard.stripe.com/apikeys)
-STRIPE_SECRET_KEY=sk_test_your_key_here
-STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
-STRIPE_WEBHOOK_SECRET=whsec_your_secret_here
-
-# Stripe Price IDs (from your products in Stripe Dashboard)
-STRIPE_PRICE_ID_PRO=price_1234567890
-STRIPE_PRICE_ID_ENTERPRISE=price_0987654321
-
-# JWT
-JWT_SECRET=your_super_secret_key_change_this
-
-# Server
-PORT=3000
-CLIENT_URL=exp://192.168.1.100:8081
-```
-
-### 4. Initialize Database
+### 4. Install Dependencies
 
 ```bash
-npm run init-db
+bun install
 ```
 
-This creates all necessary tables:
-- `users` - User accounts
-- `subscriptions` - Stripe subscriptions
-- `audio_files` - Processing history
+### 5. Run Development Server
 
-### 5. Start Server
-
-**Development:**
 ```bash
-npm run dev
+bun run dev
 ```
 
-**Production:**
-```bash
-npm start
-```
+The server will start on `http://localhost:3000`
 
-Server will run on `http://localhost:3000`
-
-## 🔑 API Endpoints
+## API Endpoints
 
 ### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+- `GET /api/auth/me` - Get current user (requires auth)
 
-**Register User**
-```http
-POST /api/auth/register
-Content-Type: application/json
+### Usage
+- `GET /api/usage/check-limit` - Check mastering limits
+- `POST /api/usage/increment` - Increment usage count
+- `GET /api/usage/history` - Get mastering history
 
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "John Doe"
-}
+### Subscription
+- `GET /api/subscription/status` - Get subscription status
 
-Response:
-{
-  "success": true,
-  "token": "jwt_token_here",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "subscriptionStatus": "free",
-    "subscriptionTier": "free"
-  }
-}
-```
+### Stripe (Optional)
+- `POST /api/stripe/create-checkout-session` - Create Stripe checkout
+- `POST /api/stripe/create-portal-session` - Create billing portal
+- `POST /api/stripe/webhook` - Stripe webhook handler
 
-**Login**
-```http
-POST /api/auth/login
-Content-Type: application/json
+## Stripe Setup (Optional)
 
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
+If you want to enable paid subscriptions:
 
-Response: Same as register
-```
+1. Create a [Stripe account](https://stripe.com)
+2. Get your API keys from the Stripe dashboard
+3. Create products and prices in Stripe
+4. Add keys to `.env`:
+   ```
+   STRIPE_SECRET_KEY=sk_test_...
+   STRIPE_PRO_PRICE_ID=price_...
+   STRIPE_UNLIMITED_PRICE_ID=price_...
+   ```
 
-**Get Current User**
-```http
-GET /api/auth/me
-Authorization: Bearer {token}
-
-Response:
-{
-  "success": true,
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "subscriptionStatus": "active",
-    "subscriptionTier": "pro",
-    "mastersThisMonth": 5
-  }
-}
-```
-
-### Stripe Subscriptions
-
-**Create Checkout Session**
-```http
-POST /api/stripe/create-checkout-session
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "priceId": "price_1234567890"
-}
-
-Response:
-{
-  "success": true,
-  "sessionId": "cs_test_...",
-  "url": "https://checkout.stripe.com/..."
-}
-```
-
-**Create Portal Session**
-```http
-POST /api/stripe/create-portal-session
-Authorization: Bearer {token}
-
-Response:
-{
-  "success": true,
-  "url": "https://billing.stripe.com/..."
-}
-```
-
-**Get Subscription Status**
-```http
-GET /api/subscription/status
-Authorization: Bearer {token}
-
-Response:
-{
-  "success": true,
-  "subscription": {
-    "id": "sub_...",
-    "status": "active",
-    "currentPeriodEnd": "2024-02-01T00:00:00Z",
-    "cancelAtPeriodEnd": false
-  },
-  "tier": "pro",
-  "mastersThisMonth": 5
-}
-```
-
-### Usage Tracking
-
-**Check Limit**
-```http
-GET /api/usage/check-limit
-Authorization: Bearer {token}
-
-Response:
-{
-  "success": true,
-  "canMaster": true,
-  "used": 5,
-  "limit": 50,
-  "remaining": 45,
-  "tier": "pro"
-}
-```
-
-**Increment Usage**
-```http
-POST /api/usage/increment
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "genre": "pop",
-  "tempo": 120,
-  "duration": 180,
-  "filename": "song.mp3"
-}
-
-Response:
-{
-  "success": true,
-  "mastersThisMonth": 6
-}
-```
-
-**Get History**
-```http
-GET /api/usage/history
-Authorization: Bearer {token}
-
-Response:
-{
-  "success": true,
-  "files": [
-    {
-      "id": "uuid",
-      "original_filename": "song.mp3",
-      "genre": "pop",
-      "tempo": 120,
-      "duration": 180,
-      "status": "completed",
-      "created_at": "2024-01-15T10:30:00Z"
-    }
-  ]
-}
-```
-
-### Webhooks
-
-**Stripe Webhook**
-```http
-POST /api/webhook
-Stripe-Signature: {signature}
-
-Handles events:
-- checkout.session.completed
-- customer.subscription.created
-- customer.subscription.updated
-- customer.subscription.deleted
-- invoice.payment_succeeded
-- invoice.payment_failed
-```
-
-## 💳 Stripe Setup
-
-### 1. Create Stripe Account
-- Go to [stripe.com](https://stripe.com)
-- Sign up and verify your account
-
-### 2. Get API Keys
-- Dashboard → Developers → API Keys
-- Copy **Publishable key** and **Secret key**
-- Add to `.env` file
-
-### 3. Create Products
-
-In Stripe Dashboard → Products:
-
-**Pro Plan**
-- Name: "Pro Plan"
-- Description: "50 masters per month"
-- Pricing: $9.99/month (recurring)
-- Copy the Price ID → `STRIPE_PRICE_ID_PRO`
-
-**Enterprise Plan**
-- Name: "Enterprise Plan"
-- Description: "Unlimited masters"
-- Pricing: $29.99/month (recurring)
-- Copy the Price ID → `STRIPE_PRICE_ID_ENTERPRISE`
-
-### 4. Set Up Webhooks
-
-Dashboard → Developers → Webhooks:
-- Click "Add endpoint"
-- URL: `https://your-backend.com/api/webhook`
-- Select events:
-  - `checkout.session.completed`
-  - `customer.subscription.created`
-  - `customer.subscription.updated`
-  - `customer.subscription.deleted`
-  - `invoice.payment_succeeded`
-  - `invoice.payment_failed`
-- Copy Webhook signing secret → `STRIPE_WEBHOOK_SECRET`
-
-## 🗄️ Database Schema
-
-### Users Table
-```sql
-id                  UUID PRIMARY KEY
-email               VARCHAR(255) UNIQUE
-password_hash       VARCHAR(255)
-name                VARCHAR(255)
-stripe_customer_id  VARCHAR(255)
-subscription_status VARCHAR(50) DEFAULT 'free'
-subscription_tier   VARCHAR(50) DEFAULT 'free'
-masters_this_month  INTEGER DEFAULT 0
-masters_total       INTEGER DEFAULT 0
-last_reset_date     DATE
-created_at          TIMESTAMP
-updated_at          TIMESTAMP
-```
-
-### Subscriptions Table
-```sql
-id                     UUID PRIMARY KEY
-user_id                UUID REFERENCES users(id)
-stripe_subscription_id VARCHAR(255) UNIQUE
-stripe_price_id        VARCHAR(255)
-status                 VARCHAR(50)
-current_period_start   TIMESTAMP
-current_period_end     TIMESTAMP
-cancel_at_period_end   BOOLEAN
-created_at             TIMESTAMP
-updated_at             TIMESTAMP
-```
-
-### Audio Files Table
-```sql
-id                UUID PRIMARY KEY
-user_id           UUID REFERENCES users(id)
-original_filename VARCHAR(255)
-genre             VARCHAR(50)
-tempo             INTEGER
-duration          NUMERIC
-file_size         BIGINT
-status            VARCHAR(50)
-created_at        TIMESTAMP
-```
-
-## 🚀 Deployment
+## Deployment
 
 ### Option 1: Railway (Recommended)
+1. Push code to GitHub
+2. Go to [railway.app](https://railway.app)
+3. Create new project from GitHub repo
+4. Add environment variables
+5. Deploy!
 
-1. Create account at [railway.app](https://railway.app)
-2. Click "New Project" → "Deploy from GitHub"
-3. Select your repository
-4. Railway auto-detects Node.js and provisions PostgreSQL
-5. Add environment variables in Railway dashboard
+### Option 2: Render
+1. Push code to GitHub
+2. Go to [render.com](https://render.com)
+3. Create new Web Service
+4. Connect GitHub repo
+5. Add environment variables
 6. Deploy!
 
-**Auto-provisions:**
-- Node.js server
-- PostgreSQL database
-- HTTPS certificate
-- Automatic deployments
+## Database Schema
 
-### Option 2: Heroku
+### users
+- id (UUID)
+- email (string, unique)
+- name (string)
+- password_hash (string)
+- subscription_status (string: free/active/canceled)
+- subscription_tier (string: free/pro/unlimited)
+- subscription_id (string, optional)
+- masters_this_month (integer)
+- created_at (timestamp)
+- updated_at (timestamp)
 
-```bash
-# Install Heroku CLI
-brew install heroku
-
-# Login
-heroku login
-
-# Create app
-heroku create clickmaster-prolite-backend
-
-# Add PostgreSQL
-heroku addons:create heroku-postgresql:mini
-
-# Set environment variables
-heroku config:set STRIPE_SECRET_KEY=sk_test_...
-heroku config:set JWT_SECRET=your_secret
-
-# Deploy
-git push heroku main
-
-# Initialize database
-heroku run npm run init-db
-```
-
-### Option 3: DigitalOcean
-
-1. Create Droplet (Ubuntu)
-2. Install Node.js and PostgreSQL
-3. Clone repository
-4. Set up environment variables
-5. Use PM2 for process management
-6. Configure Nginx as reverse proxy
-
-## 🔒 Security Checklist
-
-- ✅ Passwords hashed with bcrypt
-- ✅ JWT for authentication
-- ✅ Environment variables for secrets
-- ✅ CORS configured
-- ✅ Stripe webhook signature verification
-- ✅ SQL injection protection (parameterized queries)
-- ✅ Rate limiting (TODO: add in production)
-- ✅ HTTPS required in production
-
-## 🧪 Testing
-
-### Test with curl
-
-**Register:**
-```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123","name":"Test User"}'
-```
-
-**Login:**
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-```
-
-**Check Limit:**
-```bash
-curl -X GET http://localhost:3000/api/usage/check-limit \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Test Stripe Webhooks
-
-Use Stripe CLI:
-```bash
-# Install Stripe CLI
-brew install stripe/stripe-cli/stripe
-
-# Login
-stripe login
-
-# Forward webhooks to local server
-stripe listen --forward-to localhost:3000/api/webhook
-
-# Trigger test events
-stripe trigger checkout.session.completed
-```
-
-## 📊 Monitoring
-
-### Logs
-```bash
-# View logs (production)
-heroku logs --tail
-
-# Railway
-railway logs
-```
-
-### Database
-```bash
-# Connect to database
-psql $DATABASE_URL
-
-# Check users
-SELECT id, email, subscription_tier, masters_this_month FROM users;
-
-# Check subscriptions
-SELECT * FROM subscriptions WHERE status = 'active';
-```
-
-## 🐛 Troubleshooting
-
-**Database connection error:**
-- Check DATABASE_URL is correct
-- Ensure PostgreSQL is running
-- Check firewall/network settings
-
-**Stripe webhook not working:**
-- Verify webhook secret is correct
-- Check webhook URL is accessible
-- View webhook logs in Stripe Dashboard
-
-**JWT token invalid:**
-- Check JWT_SECRET matches
-- Token may be expired (default 7 days)
-- User may have been deleted
-
-## 📚 Next Steps
-
-1. ✅ Connect mobile app to backend
-2. ✅ Test authentication flow
-3. ✅ Test Stripe checkout
-4. ✅ Deploy to production
-5. ✅ Monitor and scale
-
-## 🔗 Useful Links
-
-- [Express Documentation](https://expressjs.com/)
-- [Stripe API Reference](https://stripe.com/docs/api)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [JWT.io](https://jwt.io/)
-
-## 🆘 Support
-
-Need help? Check the troubleshooting section or create an issue in the repository.
-
----
-
-**Backend is ready! Now connect your mobile app to start accepting payments! 🚀**
+### mastering_history
+- id (UUID)
+- user_id (UUID, foreign key)
+- genre (string)
+- tempo (integer)
+- duration (float)
+- filename (string)
+- created_at (timestamp)

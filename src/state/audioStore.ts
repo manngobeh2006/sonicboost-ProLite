@@ -21,6 +21,7 @@ export interface AudioFile {
   genre?: string;
   tempo?: number;
   masteringSettings?: any; // Store the mastering settings used
+  revisionUsed?: boolean; // whether the user has used their one AI revision
 }
 
 interface AudioState {

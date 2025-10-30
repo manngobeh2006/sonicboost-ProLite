@@ -42,14 +42,14 @@ export default function HistoryScreen() {
           </Text>
           
           <Text className="text-gray-400 text-base text-center mb-8 leading-6">
-            Upgrade to Pro to access your download history and keep track of all your mastered files.
+            Upgrade to Pro to access your download history and keep track of all your enhanced files.
           </Text>
 
           <View className="bg-gray-900 rounded-2xl p-5 mb-8 border border-gray-800 w-full">
             <Text className="text-white text-sm font-semibold mb-3">Pro features:</Text>
             {[
               'Access download history',
-              'Unlimited masters',
+              'Unlimited enhancements',
               'WAV export',
               'Tempo analysis',
               'Reference song upload',
@@ -65,7 +65,7 @@ export default function HistoryScreen() {
             onPress={() => navigation.navigate('Subscriptions')}
             className="bg-purple-600 rounded-2xl px-8 py-4 w-full items-center active:opacity-80 mb-3"
           >
-            <Text className="text-white text-base font-semibold">Upgrade to Pro - $9.99/mo</Text>
+            <Text className="text-white text-base font-semibold">Upgrade to Pro - $4.99/mo</Text>
           </Pressable>
 
           <Pressable
@@ -214,7 +214,7 @@ export default function HistoryScreen() {
           </View>
           <Text className="text-white text-xl font-bold mb-2">No files yet</Text>
           <Text className="text-gray-400 text-sm text-center mb-8">
-            Upload your first audio file to get started with professional mastering
+            Upload your first audio file to get started with sonic enhancement
           </Text>
           <Pressable
             onPress={() => navigation.navigate('Home')}

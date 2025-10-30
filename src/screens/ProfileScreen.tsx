@@ -44,9 +44,13 @@ export default function ProfileScreen() {
       }
     } catch (error: any) {
       console.error('Portal error:', error);
-      
-      // Check if it's a network error (backend not running)
-      if (error.message?.includes('Network request failed') || error.message?.includes('fetch')) {
+
+      // Check if it's a backend error (not running or misconfigured)
+      if (error.message?.includes('Network request failed') ||
+          error.message?.includes('fetch') ||
+          error.message?.includes('Backend returned non-JSON') ||
+          error.message?.includes('backend server may be offline') ||
+          error.message?.includes('Cannot connect to backend')) {
         Alert.alert(
           'Backend Offline',
           'The backend server is not running. Subscription management requires a live backend connection.\n\n' +
