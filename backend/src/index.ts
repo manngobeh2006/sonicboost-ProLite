@@ -6,11 +6,31 @@ import subscriptionRoutes from './routes/subscription';
 
 dotenv.config();
 
+// Validate required environment variables
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_KEY',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET'
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`❌ Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+const corsOrigins = process.env.CORS_ORIGINS?.split(',') || [];
+app.use(cors({
+  origin: corsOrigins.length > 0 ? corsOrigins : '*',
+  credentials: true
+}));
+
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' })); // Raw body for Stripe webhook
 app.use(express.json());
 

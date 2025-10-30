@@ -2,16 +2,48 @@ import express, { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { supabase } from '../services/supabase';
 import { authenticateToken } from '../middleware/auth';
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
 
 const router = express.Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY is required');
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16',
 });
 
+// Rate limiting for checkout endpoints
+const checkoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 requests per window
+  message: { success: false, error: 'Too many checkout requests, please try again later' }
+});
+
+// Input validation schemas
+const checkoutSessionSchema = z.object({
+  priceId: z.string().min(1)
+});
+
+const oneTimeCheckoutSchema = z.object({
+  filename: z.string().optional(),
+  amountCents: z.number().int().min(100),
+  currency: z.string().optional().default('usd')
+});
+
 // Create checkout session
-router.post('/create-checkout-session', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.post('/create-checkout-session', checkoutLimiter, authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { priceId } = req.body;
+    // Validate input
+    const validation = checkoutSessionSchema.safeParse(req.body);
+    if (!validation.success) {
+      res.status(400).json({ success: false, error: 'Invalid request data' });
+      return;
+    }
+
+    const { priceId } = validation.data;
     const userId = req.user!.userId;
 
     const session = await stripe.checkout.sessions.create({
@@ -38,19 +70,22 @@ router.post('/create-checkout-session', authenticateToken, async (req: Request, 
     });
   } catch (error: any) {
     console.error('Create checkout session error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    const errorMessage = process.env.NODE_ENV === 'development' ? error.message : 'Failed to create checkout session';
+    res.status(500).json({ success: false, error: errorMessage });
   }
 });
 
 // Create one-time payment checkout session
-router.post('/one-time-checkout', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.post('/one-time-checkout', checkoutLimiter, authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { filename, amountCents, currency = 'usd' } = req.body as { filename: string; amountCents: number; currency?: string };
-
-    if (!amountCents || amountCents < 100) {
-      res.status(400).json({ success: false, error: 'Invalid amount' });
+    // Validate input
+    const validation = oneTimeCheckoutSchema.safeParse(req.body);
+    if (!validation.success) {
+      res.status(400).json({ success: false, error: 'Invalid request data' });
       return;
     }
+
+    const { filename, amountCents, currency } = validation.data;
 
     // Create order record
     const { data: order, error: orderErr } = await supabase
@@ -103,7 +138,8 @@ router.post('/one-time-checkout', authenticateToken, async (req: Request, res: R
     res.json({ success: true, sessionId: session.id, url: session.url, orderId: order.id });
   } catch (error: any) {
     console.error('One-time checkout error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    const errorMessage = process.env.NODE_ENV === 'development' ? error.message : 'Failed to create checkout';
+    res.status(500).json({ success: false, error: errorMessage });
   }
 });
 
@@ -138,7 +174,8 @@ router.post('/create-portal-session', authenticateToken, async (req: Request, re
     });
   } catch (error: any) {
     console.error('Create portal session error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    const errorMessage = process.env.NODE_ENV === 'development' ? error.message : 'Failed to create portal session';
+    res.status(500).json({ success: false, error: errorMessage });
   }
 });
 
@@ -152,11 +189,28 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
   }
 
   try {
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is required');
+    }
+
     const event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET || ''
+      process.env.STRIPE_WEBHOOK_SECRET
     );
+
+    // Check for duplicate webhook events (idempotency)
+    const { data: existingEvent } = await supabase
+      .from('stripe_events')
+      .select('id')
+      .eq('id', event.id)
+      .single();
+
+    if (existingEvent) {
+      // Already processed this event
+      res.json({ received: true });
+      return;
+    }
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -214,6 +268,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req: R
         break;
       }
     }
+
+    // Save event to prevent duplicate processing
+    await supabase
+      .from('stripe_events')
+      .insert({
+        id: event.id,
+        type: event.type
+      });
 
     res.json({ received: true });
   } catch (error: any) {
