@@ -38,8 +38,11 @@ export default function ResultsScreen() {
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [revisionCommand, setRevisionCommand] = useState('');
   const [isRunningRevision, setIsRunningRevision] = useState(false);
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [justPurchasedOneTime, setJustPurchasedOneTime] = useState(false);
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
+  const isUnlimited = user?.subscriptionTier === 'unlimited';
 
   useEffect(() => {
     if (!file) {
@@ -232,6 +235,13 @@ export default function ResultsScreen() {
       const resp = await apiClient.createOneTimeCheckout({ filename: file.originalFileName, amountCents });
       if (resp?.url) {
         await Linking.openURL(resp.url);
+        // Show upsell modal after payment (they'll see it when they return)
+        setJustPurchasedOneTime(true);
+        setShowUpgradeModal(false);
+        // Delay showing upsell to give time for payment
+        setTimeout(() => {
+          setShowUpsellModal(true);
+        }, 2000);
       } else {
         Alert.alert('Error', 'Failed to start checkout.');
       }
@@ -599,11 +609,11 @@ export default function ResultsScreen() {
             <View className="bg-gray-800 rounded-2xl p-4 mb-6">
               <Text className="text-white text-sm font-semibold mb-3">Pro includes:</Text>
               {[
+                '50 enhancements per month',
+                'High quality processing',
                 'WAV export (lossless quality)',
-                'Unlimited masters',
                 'Download history access',
-                'Tempo analysis',
-                'Reference song upload',
+                'Priority support',
               ].map((feature, index) => (
                 <View key={index} className="flex-row items-center mb-2">
                   <Ionicons name="checkmark-circle" size={16} color="#10B981" />
@@ -619,7 +629,8 @@ export default function ResultsScreen() {
               }}
               className="bg-purple-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
             >
-              <Text className="text-white text-base font-semibold">Subscribe - $4.99/mo</Text>
+              <Text className="text-white text-base font-semibold">View Plans</Text>
+              <Text className="text-purple-200 text-xs mt-1">Starting at $11.99/mo</Text>
             </Pressable>
 
             <Pressable
@@ -639,6 +650,72 @@ export default function ResultsScreen() {
               className="py-3 items-center"
             >
               <Text className="text-gray-400 text-sm">Maybe later</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Upsell Modal - After One-Time Purchase */}
+      <Modal
+        visible={showUpsellModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowUpsellModal(false)}
+      >
+        <Pressable 
+          className="flex-1 bg-black/90 items-center justify-center px-6"
+          onPress={() => setShowUpsellModal(false)}
+        >
+          <Pressable 
+            className="bg-gray-900 rounded-3xl p-8 w-full max-w-sm border-2 border-purple-600"
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Success Icon */}
+            <View className="items-center mb-6">
+              <View className="w-16 h-16 bg-green-500/20 rounded-full items-center justify-center mb-4">
+                <Ionicons name="checkmark-circle" size={40} color="#10B981" />
+              </View>
+              <Text className="text-white text-2xl font-bold mb-2 text-center">
+                🎉 Download Unlocked!
+              </Text>
+            </View>
+
+            {/* Value Prop */}
+            <View className="bg-purple-600/10 border border-purple-600/30 rounded-2xl p-5 mb-6">
+              <View className="flex-row items-center mb-3">
+                <Ionicons name="bulb" size={20} color="#9333EA" />
+                <Text className="text-purple-400 text-sm font-bold ml-2">💡 SMART TIP</Text>
+              </View>
+              <Text className="text-white text-base font-semibold mb-3">
+                You paid $4.99 for this file.
+              </Text>
+              <Text className="text-gray-300 text-sm mb-4">
+                With <Text className="text-purple-400 font-bold">Pro ($11.99/month)</Text>, you could process <Text className="text-white font-bold">50 files</Text>.
+              </Text>
+              <View className="bg-gray-800 rounded-xl p-3">
+                <Text className="text-white text-xs text-center">
+                  That's only <Text className="text-green-400 font-bold">$0.24 per file</Text>! 🚀
+                </Text>
+              </View>
+            </View>
+
+            {/* CTA Buttons */}
+            <Pressable
+              onPress={() => {
+                setShowUpsellModal(false);
+                navigation.navigate('Subscriptions');
+              }}
+              className="bg-purple-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
+            >
+              <Text className="text-white text-base font-bold">Upgrade to Pro - $11.99/mo</Text>
+              <Text className="text-purple-200 text-xs mt-1">50 enhancements per month</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setShowUpsellModal(false)}
+              className="py-3 items-center"
+            >
+              <Text className="text-gray-400 text-sm font-semibold">Maybe Later</Text>
             </Pressable>
           </Pressable>
         </Pressable>
