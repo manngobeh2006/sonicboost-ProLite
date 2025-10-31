@@ -65,7 +65,8 @@ export default function HistoryScreen() {
             onPress={() => navigation.navigate('Subscriptions')}
             className="bg-purple-600 rounded-2xl px-8 py-4 w-full items-center active:opacity-80 mb-3"
           >
-            <Text className="text-white text-base font-semibold">Upgrade to Pro - $4.99/mo</Text>
+            <Text className="text-white text-base font-semibold">View Plans</Text>
+            <Text className="text-purple-200 text-xs mt-1">Starting at $11.99/mo</Text>
           </Pressable>
 
           <Pressable
