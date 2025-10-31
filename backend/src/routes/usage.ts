@@ -19,9 +19,9 @@ router.get('/check-limit', authenticateToken, async (req: Request, res: Response
     }
 
     const limits = {
-      free: 3,
-      pro: 20,
-      unlimited: Infinity,
+      free: 0, // Free tier can preview but not download without payment
+      pro: 50, // Pro tier: 50 enhancements per month
+      unlimited: Infinity, // Unlimited tier: no limits
     };
 
     const limit = limits[user.subscription_tier as keyof typeof limits] || 3;

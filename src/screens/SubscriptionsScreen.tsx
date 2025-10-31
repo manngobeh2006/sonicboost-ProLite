@@ -12,7 +12,8 @@ type SubscriptionsScreenNavigationProp = NativeStackNavigationProp<RootStackPara
 
 // Real Stripe Price IDs
 const STRIPE_PRICE_ID_SINGLE = 'price_1SLC6tRWPNzpeJiuYVKtG87S'; // One-time payment
-const STRIPE_PRICE_ID_PRO = 'price_1SLCDtRWPNzpeJiuh09ZNfrp'; // Monthly subscription
+const STRIPE_PRICE_ID_PRO = 'price_1SLCDtRWPNzpeJiuh09ZNfrp'; // Pro - $11.99/month (UPDATE IN STRIPE)
+const STRIPE_PRICE_ID_UNLIMITED = 'price_UNLIMITED_PLACEHOLDER'; // Unlimited - $29/month (CREATE IN STRIPE)
 
 const PLANS = [
   {
@@ -47,17 +48,36 @@ const PLANS = [
   },
   {
     id: 'pro',
-    name: 'SonicBoost Pro',
-    price: '$4.99',
+    name: 'Pro',
+    price: '$11.99',
     period: '/month',
     priceId: STRIPE_PRICE_ID_PRO,
     popular: true,
     features: [
-      'Unlimited downloads',
+      '50 enhancements per month',
       'MP3 + WAV export',
+      'High quality processing',
       'Download history access',
-      'All audio enhancement features',
+      'All enhancement features',
       'Priority support',
+      'Cancel anytime',
+    ],
+  },
+  {
+    id: 'unlimited',
+    name: 'Unlimited',
+    price: '$29',
+    period: '/month',
+    priceId: STRIPE_PRICE_ID_UNLIMITED,
+    features: [
+      'Unlimited enhancements',
+      'MP3 + WAV export',
+      'Highest quality processing',
+      'Download history access',
+      'All enhancement features',
+      'Priority support',
+      'Commercial license',
+      'API access (coming soon)',
       'Cancel anytime',
     ],
   },
