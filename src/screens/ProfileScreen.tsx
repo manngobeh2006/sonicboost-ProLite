@@ -85,6 +85,48 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleHelpSupport = () => {
+    Alert.alert(
+      'Help & Support',
+      'Need assistance?\n\n' +
+      '📧 Email: support@sonicboost.app\n' +
+      '📱 Support Hours: 9 AM - 5 PM EST\n\n' +
+      'Common Questions:\n' +
+      '• How do I download my enhanced audio?\n' +
+      '  → Subscribe to a plan, then download from Results screen\n\n' +
+      '• How do I cancel my subscription?\n' +
+      '  → Go to "Manage Subscription" above\n\n' +
+      '• Audio quality issues?\n' +
+      '  → Ensure your source file is high quality (WAV or high-bitrate MP3)',
+      [
+        { text: 'Email Support', onPress: () => Linking.openURL('mailto:support@sonicboost.app') },
+        { text: 'Close', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleAbout = () => {
+    Alert.alert(
+      'About SonicBoost ProLite',
+      'Version 1.0.0\n\n' +
+      'AI-powered audio enhancement for musicians, podcasters, and content creators.\n\n' +
+      '🎵 Features:\n' +
+      '• One-click audio mastering\n' +
+      '• AI-powered enhancement\n' +
+      '• Professional-grade results\n' +
+      '• Support for all genres\n\n' +
+      '👨\u200d💻 Developer:\n' +
+      'Emmanuel Ngobeh\n\n' +
+      '📧 Contact: manngobeh2006@gmail.com\n\n' +
+      '🔒 Your privacy matters. We never share your audio files.\n\n' +
+      '© 2025 SonicBoost. All rights reserved.',
+      [
+        { text: 'Privacy Policy', onPress: () => Linking.openURL('https://your-privacy-policy-url.com') },
+        { text: 'Close', style: 'cancel' },
+      ]
+    );
+  };
+
   const getSubscriptionBadgeColor = () => {
     const tier = user?.subscriptionTier || user?.subscriptionStatus || 'free';
     switch (tier) {
@@ -219,7 +261,10 @@ export default function ProfileScreen() {
         <View className="mx-6 mb-6">
           <Text className="text-white text-lg font-semibold mb-4">Settings</Text>
 
-          <Pressable className="bg-gray-900 rounded-2xl p-4 flex-row items-center justify-between mb-3 border border-gray-800 active:opacity-70">
+          <Pressable 
+            onPress={handleHelpSupport}
+            className="bg-gray-900 rounded-2xl p-4 flex-row items-center justify-between mb-3 border border-gray-800 active:opacity-70"
+          >
             <View className="flex-row items-center">
               <View className="w-10 h-10 bg-blue-600/20 rounded-full items-center justify-center mr-3">
                 <Ionicons name="help-circle" size={20} color="#3B82F6" />
@@ -229,7 +274,10 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#6B7280" />
           </Pressable>
 
-          <Pressable className="bg-gray-900 rounded-2xl p-4 flex-row items-center justify-between border border-gray-800 active:opacity-70">
+          <Pressable 
+            onPress={handleAbout}
+            className="bg-gray-900 rounded-2xl p-4 flex-row items-center justify-between border border-gray-800 active:opacity-70"
+          >
             <View className="flex-row items-center">
               <View className="w-10 h-10 bg-gray-700/50 rounded-full items-center justify-center mr-3">
                 <Ionicons name="information-circle" size={20} color="#9CA3AF" />
