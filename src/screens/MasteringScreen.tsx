@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuthStore } from '../state/authStore';
 import { useAudioStore } from '../state/audioStore';
@@ -190,15 +190,22 @@ export default function MasteringScreen() {
         stageMessage = 'Applying your custom settings...';
         console.log('Using custom AI-adjusted mastering settings');
       } else if (referenceTrack) {
-        // Reference-based mastering
+        // Reference-based mastering with error handling
         setCurrentStage('Analyzing reference track...');
-        const referenceAnalysis = await analyzeReferenceTrack(referenceTrack.uri);
+        try {
+          const referenceAnalysis = await analyzeReferenceTrack(referenceTrack.uri);
 
-        // Calculate reference-based mastering settings
-        masteringSettings = calculateReferenceBasedMastering(audioAnalysisResult, referenceAnalysis);
-        stageMessage = 'Matching reference sound...';
+          // Calculate reference-based mastering settings
+          masteringSettings = calculateReferenceBasedMastering(audioAnalysisResult, referenceAnalysis);
+          stageMessage = 'Matching reference sound...';
 
-        console.log('Using reference-based mastering');
+          console.log('Using reference-based mastering');
+        } catch (refError) {
+          console.error('Reference track analysis failed, falling back to genre-based mastering:', refError);
+          // Fall back to genre-based mastering if reference analysis fails
+          masteringSettings = calculateIntelligentMastering(audioAnalysisResult);
+          stageMessage = `Enhancing clarity for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
+        }
       } else {
         // Genre-based intelligent mastering
         masteringSettings = calculateIntelligentMastering(audioAnalysisResult);

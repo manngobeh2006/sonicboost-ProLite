@@ -6,6 +6,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useEffect } from "react";
 import { Audio } from "expo-av";
 
+import ErrorBoundary from "./src/components/ErrorBoundary";
+
 import { useAuthStore } from "./src/state/authStore";
 import { RootStackParamList } from "./src/navigation/types";
 
@@ -33,31 +35,33 @@ export default function App() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <StatusBar style="light" />
-          {!isAuthenticated ? (
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Login" component={LoginScreen} />
-            </Stack.Navigator>
-          ) : (
-            <Stack.Navigator
-              screenOptions={{
-                headerShown: false,
-                animation: "default",
-              }}
-            >
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="Mastering" component={MasteringScreen} />
-              <Stack.Screen name="Results" component={ResultsScreen} />
-              <Stack.Screen name="History" component={HistoryScreen} />
-              <Stack.Screen name="Profile" component={ProfileScreen} />
-              <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} />
-            </Stack.Navigator>
-          )}
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <StatusBar style="light" />
+            {!isAuthenticated ? (
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Login" component={LoginScreen} />
+              </Stack.Navigator>
+            ) : (
+              <Stack.Navigator
+                screenOptions={{
+                  headerShown: false,
+                  animation: "default",
+                }}
+              >
+                <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="Mastering" component={MasteringScreen} />
+                <Stack.Screen name="Results" component={ResultsScreen} />
+                <Stack.Screen name="History" component={HistoryScreen} />
+                <Stack.Screen name="Profile" component={ProfileScreen} />
+                <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} />
+              </Stack.Navigator>
+            )}
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }

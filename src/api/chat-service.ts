@@ -157,7 +157,7 @@ export const getGPTMiniTextResponse = async (
   options?: AIRequestOptions
 ): Promise<AIResponse> => {
   try {
-    const apiKey = process.env.EXPO_PUBLIC_VIBECODE_OPENAI_API_KEY;
+    const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OpenAI API key not found');
     }

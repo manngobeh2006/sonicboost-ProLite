@@ -5,6 +5,10 @@ import "react-native-get-random-values";
 import { LogBox } from "react-native";
 LogBox.ignoreLogs(["Expo AV has been deprecated", "Disconnected from Metro"]);
 
+// Initialize Sentry before anything else
+import { initSentry } from "./src/utils/sentry";
+initSentry();
+
 import { registerRootComponent } from "expo";
 
 import App from "./App";

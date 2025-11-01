@@ -12,8 +12,8 @@ type SubscriptionsScreenNavigationProp = NativeStackNavigationProp<RootStackPara
 
 // Real Stripe Price IDs
 const STRIPE_PRICE_ID_SINGLE = 'price_1SLC6tRWPNzpeJiuYVKtG87S'; // One-time payment
-const STRIPE_PRICE_ID_PRO = 'price_1SLCDtRWPNzpeJiuh09ZNfrp'; // Pro - $11.99/month (UPDATE IN STRIPE)
-const STRIPE_PRICE_ID_UNLIMITED = 'price_UNLIMITED_PLACEHOLDER'; // Unlimited - $29/month (CREATE IN STRIPE)
+const STRIPE_PRICE_ID_PRO = 'price_1SLCDtRWPNzpeJiuh09ZNfrp'; // Pro - $11.99/month
+const STRIPE_PRICE_ID_UNLIMITED = 'price_1SODGMRWPNzpeJiu3KDZnmz1'; // Unlimited - $29/month
 
 const PLANS = [
   {
@@ -71,13 +71,13 @@ const PLANS = [
     priceId: STRIPE_PRICE_ID_UNLIMITED,
     features: [
       'Unlimited enhancements',
+      '✨ AI Revision - Natural language control',
       'MP3 + WAV export',
       'Highest quality processing',
+      'Reference track matching',
       'Download history access',
-      'All enhancement features',
       'Priority support',
       'Commercial license',
-      'API access (coming soon)',
       'Cancel anytime',
     ],
   },
@@ -240,6 +240,29 @@ export default function SubscriptionsScreen() {
               </View>
             );
           })}
+        </View>
+
+        {/* Legal Links */}
+        <View className="mx-6 mb-4">
+          <View className="flex-row justify-center space-x-4">
+            <Pressable
+              onPress={() => Linking.openURL('https://lemon-metacarpal-c60.notion.site/Privacy-Policy-29d3cfc7ef1480f6aeb9f51ee181b202')}
+              className="py-3 px-4"
+            >
+              <Text className="text-purple-400 text-sm text-center underline">
+                Privacy Policy
+              </Text>
+            </Pressable>
+            <Text className="text-gray-600 py-3">•</Text>
+            <Pressable
+              onPress={() => Linking.openURL('https://lemon-metacarpal-c60.notion.site/Terms-of-Service-29d3cfc7ef1480efa08ecd61b13a9d01')}
+              className="py-3 px-4"
+            >
+              <Text className="text-purple-400 text-sm text-center underline">
+                Terms of Service
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Info */}

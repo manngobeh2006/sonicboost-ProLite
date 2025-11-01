@@ -55,8 +55,8 @@ router.post('/create-checkout-session', checkoutLimiter, authenticateToken, asyn
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-cancel?canceled=true`,
+      success_url: process.env.APP_URL || 'https://example.com/payment-success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: process.env.APP_URL || 'https://example.com/payment-cancel',
       client_reference_id: userId,
       metadata: {
         userId,
@@ -70,8 +70,9 @@ router.post('/create-checkout-session', checkoutLimiter, authenticateToken, asyn
     });
   } catch (error: any) {
     console.error('Create checkout session error:', error);
-    const errorMessage = process.env.NODE_ENV === 'development' ? error.message : 'Failed to create checkout session';
-    res.status(500).json({ success: false, error: errorMessage });
+    // Always show detailed error to help debugging
+    const errorMessage = error.message || 'Failed to create checkout session';
+    res.status(500).json({ success: false, error: errorMessage, details: error.type });
   }
 });
 
@@ -119,8 +120,8 @@ router.post('/one-time-checkout', checkoutLimiter, authenticateToken, async (req
           quantity: 1,
         },
       ],
-      success_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-success?order_id=${order.id}`,
-      cancel_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-cancel?order_id=${order.id}`,
+      success_url: process.env.APP_URL ? `${process.env.APP_URL}?order_id=${order.id}` : `https://example.com/payment-success?order_id=${order.id}`,
+      cancel_url: process.env.APP_URL || 'https://example.com/payment-cancel',
       client_reference_id: req.user!.userId,
       metadata: {
         userId: req.user!.userId,
@@ -165,7 +166,7 @@ router.post('/create-portal-session', authenticateToken, async (req: Request, re
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.customer as string,
-      return_url: process.env.APP_URL || 'sonicboost-prolite://',
+      return_url: process.env.APP_URL || 'https://example.com/account',
     });
 
     res.json({

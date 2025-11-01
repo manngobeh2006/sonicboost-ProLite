@@ -564,13 +564,13 @@ export default function ResultsScreen() {
 
         {/* Quick Actions */}
         <View className="mx-6 mb-8">
-          {/* AI Revision (Pro) */}
-          {isPro && !file.revisionUsed && (
+          {/* AI Revision (Unlimited Only) */}
+          {isUnlimited && (
             <Pressable
               onPress={() => setShowRevisionModal(true)}
               className="bg-blue-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
             >
-              <Text className="text-white text-base font-semibold">AI Revision (1 per file)</Text>
+              <Text className="text-white text-base font-semibold">✨ AI Revision (Unlimited)</Text>
             </Pressable>
           )}
           <Pressable

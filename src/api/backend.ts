@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import { retryAPICall, withTimeout } from '../utils/retry';
+import { logInfo, logError } from '../utils/logger';
 
 // Backend API configuration
 // In Vibecode, use the public backend URL that's exposed through the proxy
@@ -6,7 +8,7 @@ const VIBECODE_BACKEND_URL = process.env.EXPO_PUBLIC_VIBECODE_BACKEND_URL;
 
 const API_URL = __DEV__
   ? VIBECODE_BACKEND_URL || 'http://172.17.0.2:3000/api'  // Use Vibecode proxy URL or fallback
-  : 'https://your-backend.com/api'; // Production
+  : 'https://sonicboost-backend.onrender.com/api'; // Production
 
 if (__DEV__) {
   console.log('🔧 Backend URL configured:', API_URL);
@@ -28,77 +30,73 @@ class APIClient {
     }
   }
 
-  // Make authenticated request with timeout
+  // Make authenticated request with timeout and retry logic
   private async request(endpoint: string, options: RequestInit = {}) {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
-    };
+    return await retryAPICall(
+      async () => {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          ...(options.headers as Record<string, string>),
+        };
 
-    // Add auth token from Supabase if available
-    const token = await this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+        // Add auth token from Supabase if available
+        const token = await this.getToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
-    if (__DEV__) {
-      console.log(`🌐 Making request to: ${API_URL}${endpoint}`);
-      console.log(`📤 Request data:`, options.body);
-    }
+        logInfo(`API Request: ${endpoint}`, { method: options.method || 'GET' });
 
-    try {
-      // Create timeout promise
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout - backend may be unreachable')), 30000);
-      });
+        if (__DEV__) {
+          console.log(`🌐 Making request to: ${API_URL}${endpoint}`);
+          console.log(`📤 Request data:`, options.body);
+        }
 
-      // Race between fetch and timeout
-      const response = await Promise.race([
-        fetch(`${API_URL}${endpoint}`, {
-          ...options,
-          headers,
-        }),
-        timeoutPromise
-      ]) as Response;
+        // Wrap fetch with timeout
+        const response = await withTimeout(
+          fetch(`${API_URL}${endpoint}`, {
+            ...options,
+            headers,
+          }),
+          30000,
+          'Request timeout - backend may be unreachable'
+        );
 
-      if (__DEV__) {
-        console.log(`📥 Response status: ${response.status}`);
-        console.log(`📥 Response content-type: ${response.headers.get('content-type')}`);
+        if (__DEV__) {
+          console.log(`📥 Response status: ${response.status}`);
+          console.log(`📥 Response content-type: ${response.headers.get('content-type')}`);
+        }
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const textResponse = await response.text();
+          console.error('❌ Non-JSON response received:', textResponse.substring(0, 200));
+          const error: any = new Error('Backend returned non-JSON response. The backend server may be offline or misconfigured.');
+          error.status = response.status;
+          throw error;
+        }
+
+        const data = await response.json();
+        
+        if (__DEV__) {
+          console.log(`📥 Response data:`, data);
+        }
+
+        if (!response.ok) {
+          const error: any = new Error(data.error || 'Request failed');
+          error.status = response.status;
+          throw error;
+        }
+
+        return data;
+      },
+      `Backend ${endpoint}`,
+      {
+        maxRetries: 3,
+        baseDelay: 1000,
       }
-
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        console.error('❌ Non-JSON response received:', textResponse.substring(0, 200));
-        throw new Error('Backend returned non-JSON response. The backend server may be offline or misconfigured.');
-      }
-
-      const data = await response.json();
-      
-      if (__DEV__) {
-        console.log(`📥 Response data:`, data);
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Request failed');
-      }
-
-      return data;
-    } catch (error: any) {
-      console.error(`❌ Request failed:`, error);
-
-      // Provide more helpful error messages
-      if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
-        throw new Error('Cannot connect to backend server. Please ensure the backend is running.');
-      } else if (error.message?.includes('timeout')) {
-        throw new Error('Backend request timed out. The server may be unreachable.');
-      } else if (error.message?.includes('non-JSON response')) {
-        throw error; // Already has a good message
-      }
-
-      throw error;
-    }
+    );
   }
 
   // Subscription endpoints (Auth handled by Supabase)

@@ -5,15 +5,43 @@
     "scheme": "sonicboost-prolite",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "description": "Enhance your audio with AI-powered mastering. One-click audio enhancement for musicians, podcasters, and content creators.",
+    "primaryColor": "#9333EA",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sonicboost.prolite"
+      "bundleIdentifier": "com.sonicboost.prolite",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SonicBoost needs access to your microphone to record and enhance audio in real-time.",
+        "NSPhotoLibraryUsageDescription": "SonicBoost needs access to your photo library to import audio files for enhancement.",
+        "NSPhotoLibraryAddUsageDescription": "SonicBoost needs permission to save your enhanced audio files to your photo library."
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true
-    }
+      "usesCleartextTraffic": true,
+      "package": "com.sonicboost.prolite",
+      "permissions": [
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      [
+        "sentry-expo",
+        {
+          "organization": "personal-kte",
+          "project": "react-native"
+        }
+      ]
+    ]
   }
 }

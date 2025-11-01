@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Audio } from 'expo-av';
 
 /**
@@ -142,8 +142,8 @@ export async function analyzeAudioFile(uri: string, filename: string): Promise<A
       ? status.durationMillis / 1000
       : 180;
 
-    // Detect genre from filename keywords
-    const genre = detectGenreFromFilename(filename);
+    // Detect genre from filename (with AI enhancement)
+    const genre = await detectGenreFromFilename(filename);
 
     // Detect actual tempo from audio content
     const tempo = await detectRealTempo(uri, duration, genre);
@@ -179,12 +179,12 @@ export async function analyzeAudioFile(uri: string, filename: string): Promise<A
 }
 
 /**
- * Detect genre from filename keywords
+ * Detect genre from filename using AI + keywords
  */
-function detectGenreFromFilename(filename: string): AudioGenre {
+async function detectGenreFromFilename(filename: string): Promise<AudioGenre> {
   const lower = filename.toLowerCase();
   
-  // Check for genre keywords
+  // First try keyword detection for obvious cases
   if (lower.includes('pop') || lower.includes('billboard')) return 'pop';
   if (lower.includes('rock') || lower.includes('metal') || lower.includes('guitar')) return 'rock';
   if (lower.includes('hip') || lower.includes('rap') || lower.includes('trap') || lower.includes('beat')) return 'hiphop';
@@ -194,6 +194,51 @@ function detectGenreFromFilename(filename: string): AudioGenre {
   if (lower.includes('acoustic') || lower.includes('unplugged') || lower.includes('folk')) return 'acoustic';
   if (lower.includes('vocal') || lower.includes('acapella') || lower.includes('choir') || lower.includes('singing')) return 'vocal';
   if (lower.includes('podcast') || lower.includes('interview') || lower.includes('talk') || lower.includes('speech')) return 'podcast';
+  
+  // If no keywords found, try AI detection
+  try {
+    const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
+    if (!apiKey) {
+      return 'unknown';
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a music genre classifier. Respond with ONLY one word: pop, rock, hiphop, electronic, jazz, classical, acoustic, vocal, podcast, or unknown.'
+          },
+          {
+            role: 'user',
+            content: `Detect the music genre from this filename: "${filename}". Response must be one word only.`
+          }
+        ],
+        max_tokens: 10,
+        temperature: 0.3,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const detectedGenre = data.choices?.[0]?.message?.content?.trim().toLowerCase();
+      
+      // Validate it's a known genre
+      const validGenres: AudioGenre[] = ['pop', 'rock', 'hiphop', 'electronic', 'jazz', 'classical', 'acoustic', 'vocal', 'podcast'];
+      if (detectedGenre && validGenres.includes(detectedGenre as AudioGenre)) {
+        console.log(`AI detected genre: ${detectedGenre}`);
+        return detectedGenre as AudioGenre;
+      }
+    }
+  } catch (error) {
+    console.log('AI genre detection failed, using unknown');
+  }
   
   return 'unknown';
 }
@@ -674,11 +719,22 @@ export async function analyzeReferenceTrack(uri: string): Promise<ReferenceAnaly
   try {
     console.log('Analyzing reference track:', uri);
 
-    // Load the audio file to get basic properties
-    const { sound } = await Audio.Sound.createAsync(
+    // Load the audio file to get basic properties with timeout
+    const loadPromise = Audio.Sound.createAsync(
       { uri },
       { shouldPlay: false }
     );
+
+    // Add 10 second timeout (increased for larger files)
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Reference track load timeout')), 10000)
+    );
+
+    const { sound } = await Promise.race([loadPromise, timeoutPromise]);
+    
+    if (!sound) {
+      throw new Error('Failed to load reference track');
+    }
 
     const status = await sound.getStatusAsync();
     let duration = 0;
