@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import stripeRoutes from './routes/stripe';
 import subscriptionRoutes from './routes/subscription';
+import usageRoutes from './routes/usage';
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use(express.json());
 // Routes - Only payment and subscription routes (Auth handled by Supabase)
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/usage', usageRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
