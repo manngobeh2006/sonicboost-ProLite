@@ -55,8 +55,8 @@ router.post('/create-checkout-session', checkoutLimiter, authenticateToken, asyn
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.APP_URL || 'myapp://'}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL || 'myapp://'}?canceled=true`,
+      success_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-cancel?canceled=true`,
       client_reference_id: userId,
       metadata: {
         userId,
@@ -119,8 +119,8 @@ router.post('/one-time-checkout', checkoutLimiter, authenticateToken, async (req
           quantity: 1,
         },
       ],
-      success_url: `${process.env.APP_URL || 'myapp://'}?status=success&order_id=${order.id}`,
-      cancel_url: `${process.env.APP_URL || 'myapp://'}?status=cancelled&order_id=${order.id}`,
+      success_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-success?order_id=${order.id}`,
+      cancel_url: `${process.env.APP_URL || 'sonicboost-prolite://'}payment-cancel?order_id=${order.id}`,
       client_reference_id: req.user!.userId,
       metadata: {
         userId: req.user!.userId,
@@ -165,7 +165,7 @@ router.post('/create-portal-session', authenticateToken, async (req: Request, re
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.customer as string,
-      return_url: process.env.APP_URL || 'myapp://',
+      return_url: process.env.APP_URL || 'sonicboost-prolite://',
     });
 
     res.json({
