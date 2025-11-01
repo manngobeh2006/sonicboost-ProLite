@@ -10,8 +10,7 @@ dotenv.config();
 const requiredEnvVars = [
   'SUPABASE_URL',
   'SUPABASE_SERVICE_KEY',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET'
+  'STRIPE_SECRET_KEY'
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -19,6 +18,11 @@ for (const envVar of requiredEnvVars) {
     console.error(`❌ Missing required environment variable: ${envVar}`);
     process.exit(1);
   }
+}
+
+// Warn if webhook secret is missing (can be added after deployment)
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+  console.warn('⚠️  STRIPE_WEBHOOK_SECRET not set - webhooks will not work until configured');
 }
 
 const app = express();
