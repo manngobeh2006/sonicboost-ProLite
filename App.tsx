@@ -25,9 +25,17 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const initialize = useAuthStore((state) => state.initialize);
+  const refreshUser = useAuthStore((state) => state.refreshUser);
   const navigationRef = useRef<any>(null);
 
   useEffect(() => {
+    // Initialize auth store (sets up Supabase listener)
+    initialize();
+    
+    // Refresh user session on app start
+    refreshUser();
+
     // Configure audio mode
     Audio.setAudioModeAsync({
       playsInSilentModeIOS: true,

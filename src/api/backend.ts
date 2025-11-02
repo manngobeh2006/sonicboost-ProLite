@@ -23,9 +23,18 @@ class APIClient {
   async getToken(): Promise<string | null> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      if (__DEV__) {
+        console.log('🔑 Token check:', {
+          hasSession: !!session,
+          hasToken: !!session?.access_token,
+          userId: session?.user?.id,
+        });
+      }
+      
       return session?.access_token || null;
     } catch (error) {
-      console.error('Failed to get token:', error);
+      console.error('❌ Failed to get token:', error);
       return null;
     }
   }
