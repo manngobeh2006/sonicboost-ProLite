@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - SonicBoost ProLite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #10B981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            animation: scaleIn 0.5s ease-out;
+        }
+        
+        .success-icon::before {
+            content: "✓";
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-size: 32px;
+            color: #1F2937;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        
+        p {
+            font-size: 18px;
+            color: #6B7280;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+        
+        .info-box {
+            background: #F3F4F6;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        
+        .check-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: #1F2937;
+        }
+        
+        .check-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .checkmark {
+            color: #10B981;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 20px;
+        }
+        
+        .features-box {
+            margin: 30px 0;
+            text-align: left;
+        }
+        
+        .features-title {
+            font-size: 16px;
+            color: #1F2937;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .features-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .features-list li {
+            color: #6B7280;
+            margin: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .features-list li::before {
+            content: "🎵";
+            position: absolute;
+            left: 0;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 40px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .countdown {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #9CA3AF;
+        }
+        
+        .support {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #9CA3AF;
+        }
+        
+        .support a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .support a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon"></div>
+        
+        <h1>Payment Successful!</h1>
+        <p>Thank you for subscribing to <strong>SonicBoost ProLite</strong></p>
+        
+        <div class="info-box">
+            <div class="check-item">
+                <span class="checkmark">✓</span>
+                <span>Your subscription is now active</span>
+            </div>
+            <div class="check-item">
+                <span class="checkmark">✓</span>
+                <span>Receipt sent to your email</span>
+            </div>
+            <div class="check-item">
+                <span class="checkmark">✓</span>
+                <span>Unlimited audio enhancements</span>
+            </div>
+        </div>
+        
+        <div class="features-box">
+            <p class="features-title">You can now:</p>
+            <ul class="features-list">
+                <li>Download your enhanced audio files</li>
+                <li>Master unlimited tracks</li>
+                <li>Access all premium features</li>
+                <li>Get priority support</li>
+            </ul>
+        </div>
+        
+        <button onclick="openApp()" class="button">
+            Return to App
+        </button>
+        
+        <p class="countdown" id="countdown">
+            Auto-returning in <span id="timer">10</span> seconds...
+        </p>
+        
+        <p class="support">
+            Need help? Contact us at 
+            <a href="mailto:support@sonicboost.app">support@sonicboost.app</a>
+        </p>
+    </div>
+    
+    <script>
+        let countdown = 10;
+        const timerEl = document.getElementById('timer');
+        
+        const interval = setInterval(() => {
+            countdown--;
+            timerEl.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(interval);
+                openApp();
+            }
+        }, 1000);
+        
+        function openApp() {
+            // Try to open app with deep link
+            window.location.href = 'sonicboost-prolite://payment-success';
+            
+            // Fallback message
+            setTimeout(() => {
+                alert('Please return to the SonicBoost app to continue!');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
