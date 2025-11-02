@@ -207,12 +207,12 @@
             </ul>
         </div>
         
-        <button onclick="openApp()" class="button">
+        <a href="sonicboost-prolite://payment-success" class="button" id="returnButton">
             Return to App
-        </button>
+        </a>
         
         <p class="countdown" id="countdown">
-            Auto-returning in <span id="timer">10</span> seconds...
+            Redirecting automatically...
         </p>
         
         <p class="support">
@@ -222,28 +222,31 @@
     </div>
     
     <script>
-        let countdown = 10;
-        const timerEl = document.getElementById('timer');
-        
-        const interval = setInterval(() => {
-            countdown--;
-            timerEl.textContent = countdown;
+        // Immediately try to open the app
+        function tryOpenApp() {
+            // For iOS - create invisible iframe to trigger deep link
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = 'sonicboost-prolite://payment-success';
+            document.body.appendChild(iframe);
             
-            if (countdown <= 0) {
-                clearInterval(interval);
-                openApp();
-            }
-        }, 1000);
-        
-        function openApp() {
-            // Try to open app with deep link
+            // Also try direct navigation
             window.location.href = 'sonicboost-prolite://payment-success';
             
-            // Fallback message
+            // Remove iframe after a delay
             setTimeout(() => {
-                alert('Please return to the SonicBoost app to continue!');
-            }, 2000);
+                document.body.removeChild(iframe);
+            }, 1000);
         }
+        
+        // Try immediately on page load
+        setTimeout(tryOpenApp, 500);
+        
+        // Also make the button work
+        document.getElementById('returnButton').addEventListener('click', function(e) {
+            e.preventDefault();
+            tryOpenApp();
+        });
     </script>
 </body>
 </html>
