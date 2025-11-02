@@ -33,6 +33,20 @@ export default function ProfileScreen() {
   };
 
   const handleManageSubscription = async () => {
+    // Check if user has an active subscription
+    const tier = user?.subscriptionTier || user?.subscriptionStatus || 'free';
+    if (tier === 'free' || !user?.subscriptionId) {
+      Alert.alert(
+        'No Active Subscription',
+        'You don\'t have an active subscription yet. Subscribe to a plan first to manage your subscription.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'View Plans', onPress: () => navigation.navigate('Subscriptions') },
+        ]
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await apiClient.createPortalSession();

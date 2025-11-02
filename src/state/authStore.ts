@@ -243,7 +243,7 @@ export const useAuthStore = create<AuthState>()(
           console.log('🚀 Starting forgot password process...');
 
           const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: 'sonicboost://reset-password',
+            redirectTo: 'https://sonicboost.one-clickmaster.com/reset-password',
           });
 
           if (error) {
