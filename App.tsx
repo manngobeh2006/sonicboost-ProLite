@@ -3,8 +3,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Audio } from "expo-av";
+import * as Linking from "expo-linking";
 
 import ErrorBoundary from "./src/components/ErrorBoundary";
 
@@ -24,6 +25,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const navigationRef = useRef<any>();
 
   useEffect(() => {
     // Configure audio mode
@@ -32,13 +34,40 @@ export default function App() {
       staysActiveInBackground: false,
       shouldDuckAndroid: true,
     });
-  }, []);
+
+    // Handle deep links (payment success)
+    const handleDeepLink = (event: { url: string }) => {
+      const url = event.url;
+      console.log('Deep link received:', url);
+      
+      if (url.includes('payment-success')) {
+        // Navigate to Home screen after payment
+        if (navigationRef.current && isAuthenticated) {
+          navigationRef.current.navigate('Home');
+        }
+      }
+    };
+
+    // Listen for deep link events
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // Check if app was opened with a deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
 
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef}>
             <StatusBar style="light" />
             {!isAuthenticated ? (
               <Stack.Navigator screenOptions={{ headerShown: false }}>
