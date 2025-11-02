@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { retryAPICall, withTimeout } from '../utils/retry';
-import { logInfo, logError } from '../utils/logger';
+import { logInfo } from '../utils/logger';
 
 // Backend API configuration
 // In Vibecode, use the public backend URL that's exposed through the proxy

@@ -18,15 +18,8 @@ export const initSentry = () => {
   Sentry.init({
     dsn,
     environment: __DEV__ ? 'development' : 'production',
-    enableInExpoDevelopment: false,
     debug: false,
     tracesSampleRate: 1.0, // Capture 100% of transactions in production
-    integrations: [
-      new Sentry.ReactNativeTracing({
-        tracingOrigins: ['localhost', 'sonicboost-backend.onrender.com', /^\//],
-        routingInstrumentation: new Sentry.ReactNavigationInstrumentation(),
-      }),
-    ],
     beforeSend(event) {
       // Filter out specific errors if needed
       if (event.exception) {

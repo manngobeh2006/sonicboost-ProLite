@@ -25,7 +25,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const navigationRef = useRef<any>();
+  const navigationRef = useRef<any>(null);
 
   useEffect(() => {
     // Configure audio mode
