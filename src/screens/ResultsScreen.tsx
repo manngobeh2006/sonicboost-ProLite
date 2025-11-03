@@ -260,34 +260,77 @@ export default function ResultsScreen() {
       return;
     }
 
+    // Check revision limit (3 per song for unlimited users)
+    const revisionsUsed = (file as any).revisionsUsed || 0;
+    if (revisionsUsed >= 3) {
+      Alert.alert(
+        'Revision Limit Reached',
+        'You\'ve used all 3 revisions for this song. This helps ensure optimal server performance.\n\nTip: Process a new version of the song to get 3 more revisions!'
+      );
+      return;
+    }
+
     try {
       setIsRunningRevision(true);
-      // Analyze (or reuse if stored later)
+      setRevisionCommand(''); // Clear input while processing
+      
+      // Stop current playback
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+      }
+      
+      // Reanalyze the CURRENT mastered audio (not original) to build upon existing enhancement
       const analysis = await analyzeAudioFile(file.masteredUri || file.originalUri, file.originalFileName);
-      // Base settings
-      const base = calculateIntelligentMastering(analysis);
+      
+      // Get current settings or use defaults
+      const currentSettings = file.masteringSettings || calculateIntelligentMastering(analysis);
+      
+      // Parse user's natural language command
       const cmd = await parseAudioCommand(revisionCommand);
       if (cmd.type === 'unknown') {
         Alert.alert('Not understood', cmd.description);
         setIsRunningRevision(false);
         return;
       }
-      const newSettings = applyAudioCommand(base, cmd);
+      
+      // Apply command to current settings (incremental adjustment)
+      const newSettings = applyAudioCommand(currentSettings, cmd);
 
-      // Re-process into new mastered files (overwrite existing URIs)
+      // Re-process the audio with new settings (overwrite existing)
       const mp3Uri = file.masteredMp3Uri || file.masteredUri;
       const wavUri = file.masteredWavUri || file.masteredUri;
-      if (mp3Uri) await processAudioFile(file.originalUri, mp3Uri, newSettings);
-      if (wavUri) await processAudioFile(file.originalUri, wavUri, newSettings);
+      
+      if (mp3Uri) {
+        await processAudioFile(file.originalUri, mp3Uri, newSettings);
+      }
+      if (wavUri) {
+        await processAudioFile(file.originalUri, wavUri, newSettings);
+      }
 
-      // Mark revision used
-      // @ts-ignore store has this field
-      useAudioStore.getState().updateFile(file.id, { masteringSettings: newSettings, revisionUsed: true });
+      // Update file with new settings and increment revision count
+      const updatedRevisionsCount = revisionsUsed + 1;
+      // @ts-ignore
+      useAudioStore.getState().updateFile(file.id, { 
+        masteringSettings: newSettings, 
+        revisionsUsed: updatedRevisionsCount 
+      });
+
+      // Reload the audio player with updated file
+      await loadAudio(file.masteredUri, 'mastered');
+      setCurrentVersion('mastered');
 
       setShowRevisionModal(false);
-      Alert.alert('Revision applied', 'Your audio was updated with your requested changes.');
+      
+      const remainingRevisions = 3 - updatedRevisionsCount;
+      Alert.alert(
+        'Revision Applied! ✨',
+        `Your audio has been reprocessed with: "${revisionCommand}"\n\n${remainingRevisions} revision${remainingRevisions !== 1 ? 's' : ''} remaining for this song.`
+      );
     } catch (e: any) {
-      Alert.alert('Revision failed', e?.message || 'Could not apply revision.');
+      console.error('Revision error:', e);
+      Alert.alert('Revision failed', e?.message || 'Could not apply revision. Please try again.');
     } finally {
       setIsRunningRevision(false);
     }
@@ -571,7 +614,10 @@ export default function ResultsScreen() {
               onPress={() => setShowRevisionModal(true)}
               className="bg-blue-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
             >
-              <Text className="text-white text-base font-semibold">✨ AI Revision (Unlimited)</Text>
+              <Text className="text-white text-base font-semibold">✨ AI Revision</Text>
+              <Text className="text-blue-200 text-xs mt-1">
+                {3 - ((file as any).revisionsUsed || 0)} revisions remaining
+              </Text>
             </Pressable>
           )}
           <Pressable

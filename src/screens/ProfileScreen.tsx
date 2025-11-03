@@ -125,10 +125,10 @@ export default function ProfileScreen() {
       'Version 1.0.0\n\n' +
       'AI-powered audio enhancement for musicians, podcasters, and content creators.\n\n' +
       '🎵 Features:\n' +
-      '• One-click audio mastering\n' +
-      '• AI-powered enhancement\n' +
+      '• One-click sonic enhancement\n' +
+      '• AI-powered audio processing\n' +
       '• Professional-grade results\n' +
-      '• Support for all genres\n\n' +
+      '• Support for all genres\n\n'
       '👨\u200d💻 Developer:\n' +
       'Emmanuel Ngobeh\n\n' +
       '📧 Contact: manngobeh2006@gmail.com\n\n' +

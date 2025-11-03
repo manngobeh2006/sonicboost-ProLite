@@ -149,34 +149,59 @@ router.post('/create-portal-session', authenticateToken, async (req: Request, re
   try {
     const userId = req.user!.userId;
 
+    console.log('[Portal] Creating portal session for user:', userId);
+
     // Get user's subscription
-    const { data: user } = await supabase
+    const { data: user, error: userError } = await supabase
       .from('users')
-      .select('subscription_id')
+      .select('subscription_id, subscription_tier, subscription_status, email')
       .eq('id', userId)
       .single();
 
+    if (userError) {
+      console.error('[Portal] Failed to fetch user:', userError);
+      res.status(500).json({ success: false, error: 'Failed to fetch user data' });
+      return;
+    }
+
+    console.log('[Portal] User data:', { 
+      subscription_id: user.subscription_id,
+      tier: user.subscription_tier,
+      status: user.subscription_status 
+    });
+
     if (!user?.subscription_id) {
-      res.status(400).json({ success: false, error: 'No active subscription' });
+      console.log('[Portal] No subscription ID found');
+      res.status(400).json({ success: false, error: 'No active subscription found. Please subscribe to a plan first.' });
       return;
     }
 
     // Get customer ID from subscription
+    console.log('[Portal] Retrieving Stripe subscription:', user.subscription_id);
     const subscription = await stripe.subscriptions.retrieve(user.subscription_id);
+    console.log('[Portal] Subscription customer:', subscription.customer);
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.customer as string,
-      return_url: process.env.APP_URL || 'https://example.com/account',
+      return_url: `${process.env.APP_URL || 'https://example.com'}/profile`,
     });
+
+    console.log('[Portal] Portal session created successfully');
 
     res.json({
       success: true,
       url: session.url,
     });
   } catch (error: any) {
-    console.error('Create portal session error:', error);
-    const errorMessage = process.env.NODE_ENV === 'development' ? error.message : 'Failed to create portal session';
-    res.status(500).json({ success: false, error: errorMessage });
+    console.error('[Portal] Error:', error);
+    console.error('[Portal] Error type:', error.type);
+    console.error('[Portal] Error code:', error.code);
+    const errorMessage = error.message || 'Failed to create portal session';
+    res.status(500).json({ 
+      success: false, 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.type : undefined
+    });
   }
 });
 
