@@ -76,20 +76,26 @@ export const useAuthStore = create<AuthState>()(
                 console.log('📝 Creating missing profile...');
                 const { data: newProfile, error: createError } = await supabase
                   .from('users')
-                  .insert({
+                  .upsert({
                     id: data.user.id,
                     email: data.user.email,
                     name: data.user.email?.split('@')[0] || 'User',
                     subscription_status: 'free',
                     subscription_tier: 'free',
                     enhancements_this_month: 0,
+                  }, {
+                    onConflict: 'id',
+                    ignoreDuplicates: false
                   })
                   .select()
                   .single();
 
                 if (createError) {
                   console.error('❌ Profile creation error:', createError);
-                  return { success: false, error: 'Failed to create user profile' };
+                  console.error('Error code:', createError.code);
+                  console.error('Error details:', createError.details);
+                  console.error('Error hint:', createError.hint);
+                  return { success: false, error: `Failed to create user profile: ${createError.message}` };
                 }
 
                 const user: User = {
