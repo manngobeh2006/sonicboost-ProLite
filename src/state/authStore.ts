@@ -341,21 +341,69 @@ export const useAuthStore = create<AuthState>()(
             .single();
 
           if (error || !profile) {
-            // If profile doesn't exist, create it
+            // If profile doesn't exist by ID, check if one exists by email
             if (error?.code === 'PGRST116') {
-              console.log('📝 Creating missing profile during refresh...');
+              console.log('📝 Profile not found by ID, checking by email...');
+              
+              // Try to find profile by email
+              const { data: emailProfile } = await supabase
+                .from('users')
+                .select('*')
+                .eq('email', authUser.email)
+                .single();
+              
+              if (emailProfile) {
+                // Profile exists with email but wrong ID - update the ID
+                console.log('📝 Updating profile ID to match auth user...');
+                const { data: updatedProfile, error: updateError } = await supabase
+                  .from('users')
+                  .update({ id: authUser.id })
+                  .eq('email', authUser.email)
+                  .select()
+                  .single();
+                
+                if (updateError || !updatedProfile) {
+                  console.error('❌ Failed to update profile ID:', updateError);
+                  // If update fails, just use the existing profile
+                  const user: User = {
+                    id: emailProfile.id,
+                    email: emailProfile.email,
+                    name: emailProfile.name,
+                    subscriptionStatus: emailProfile.subscription_status,
+                    subscriptionTier: emailProfile.subscription_tier,
+                    subscriptionId: emailProfile.subscription_id,
+                    enhancementsThisMonth: emailProfile.enhancements_this_month,
+                    createdAt: emailProfile.created_at,
+                  };
+                  set({ user, isAuthenticated: true });
+                  return;
+                }
+                
+                const user: User = {
+                  id: updatedProfile.id,
+                  email: updatedProfile.email,
+                  name: updatedProfile.name,
+                  subscriptionStatus: updatedProfile.subscription_status,
+                  subscriptionTier: updatedProfile.subscription_tier,
+                  subscriptionId: updatedProfile.subscription_id,
+                  enhancementsThisMonth: updatedProfile.enhancements_this_month,
+                  createdAt: updatedProfile.created_at,
+                };
+                set({ user, isAuthenticated: true });
+                return;
+              }
+              
+              // No profile exists at all - create new one
+              console.log('📝 Creating new profile...');
               const { data: newProfile, error: createError } = await supabase
                 .from('users')
-                .upsert({
+                .insert({
                   id: authUser.id,
                   email: authUser.email,
                   name: authUser.email?.split('@')[0] || 'User',
                   subscription_status: 'free',
                   subscription_tier: 'free',
                   enhancements_this_month: 0,
-                }, {
-                  onConflict: 'id',
-                  ignoreDuplicates: false
                 })
                 .select()
                 .single();
