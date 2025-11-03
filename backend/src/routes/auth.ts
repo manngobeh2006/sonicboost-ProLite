@@ -4,6 +4,15 @@ import jwt from 'jsonwebtoken';
 import { supabase } from '../services/supabase';
 import { authenticateToken } from '../middleware/auth';
 import { User, UserResponse } from '../types';
+import { 
+  authLimiter, 
+  passwordResetLimiter, 
+  sanitizeInputs,
+  isValidEmail,
+  validatePasswordStrength,
+  trackFailedLogin,
+  ipProtection
+} from '../middleware/security';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -21,12 +30,25 @@ const formatUserResponse = (user: User): UserResponse => ({
 });
 
 // Register new user
-router.post('/register', async (req: Request, res: Response): Promise<void> => {
+router.post('/register', ipProtection, authLimiter, sanitizeInputs, async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, name } = req.body;
 
     if (!email || !password || !name) {
       res.status(400).json({ success: false, error: 'Missing required fields' });
+      return;
+    }
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      res.status(400).json({ success: false, error: 'Invalid email format' });
+      return;
+    }
+
+    // Validate password strength
+    const passwordCheck = validatePasswordStrength(password);
+    if (!passwordCheck.valid) {
+      res.status(400).json({ success: false, error: passwordCheck.error });
       return;
     }
 
@@ -82,7 +104,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 });
 
 // Login user
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+router.post('/login', ipProtection, authLimiter, sanitizeInputs, async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
@@ -106,6 +128,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     // Verify password
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
+      // Track failed login attempt
+      trackFailedLogin(req.ip || 'unknown');
       res.status(401).json({ success: false, error: 'Invalid email or password' });
       return;
     }
@@ -129,7 +153,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 });
 
 // Forgot password - send reset email
-router.post('/forgot-password', async (req: Request, res: Response): Promise<void> => {
+router.post('/forgot-password', passwordResetLimiter, sanitizeInputs, async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
 
@@ -178,7 +202,7 @@ router.post('/forgot-password', async (req: Request, res: Response): Promise<voi
 });
 
 // Reset password
-router.post('/reset-password', async (req: Request, res: Response): Promise<void> => {
+router.post('/reset-password', passwordResetLimiter, sanitizeInputs, async (req: Request, res: Response): Promise<void> => {
   try {
     const { token, newPassword } = req.body;
 
@@ -187,8 +211,10 @@ router.post('/reset-password', async (req: Request, res: Response): Promise<void
       return;
     }
 
-    if (newPassword.length < 6) {
-      res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    // Validate password strength
+    const passwordCheck = validatePasswordStrength(newPassword);
+    if (!passwordCheck.valid) {
+      res.status(400).json({ success: false, error: passwordCheck.error });
       return;
     }
 

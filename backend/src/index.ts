@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import stripeRoutes from './routes/stripe';
 import subscriptionRoutes from './routes/subscription';
 import usageRoutes from './routes/usage';
+import authRoutes from './routes/auth';
+import { securityHeaders, apiLimiter } from './middleware/security';
 
 dotenv.config();
 
@@ -29,25 +31,37 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-// Middleware
+// Security middleware (MUST be first)
+app.use(securityHeaders);
+
+// Trust proxy (needed for rate limiting behind reverse proxy)
+app.set('trust proxy', 1);
+
+// CORS configuration
 const corsOrigins = process.env.CORS_ORIGINS?.split(',') || [];
 app.use(cors({
   origin: corsOrigins.length > 0 ? corsOrigins : '*',
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' })); // Raw body for Stripe webhook
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Limit body size
 
-// Routes - Only payment and subscription routes (Auth handled by Supabase)
-app.use('/api/stripe', stripeRoutes);
-app.use('/api/subscription', subscriptionRoutes);
-app.use('/api/usage', usageRoutes);
-
-// Health check
+// Health check (BEFORE rate limiter - must be publicly accessible)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'SonicBoost Payment API is running' });
 });
+
+// Global rate limiting (apply after body parsing)
+app.use('/api/', apiLimiter);
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/usage', usageRoutes);
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
