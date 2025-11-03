@@ -146,6 +146,8 @@ export default function ProfileScreen() {
     switch (tier) {
       case 'pro':
         return 'bg-purple-600';
+      case 'unlimited':
+        return 'bg-blue-600';
       default:
         return 'bg-gray-600';
     }

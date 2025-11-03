@@ -42,7 +42,8 @@ export default function ResultsScreen() {
   const [justPurchasedOneTime, setJustPurchasedOneTime] = useState(false);
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
-  const isUnlimited = user?.subscriptionTier === 'unlimited';
+  const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
+  const hasPremium = isPro || isUnlimited; // Helper for any paid plan
 
   useEffect(() => {
     if (!file) {
@@ -182,7 +183,7 @@ export default function ResultsScreen() {
     if (!file) return;
 
     // Check if user has subscription or a paid one-time order for this file
-    if (!isPro) {
+    if (!hasPremium) {
       try {
         const auth = await apiClient.authorizeDownload({ filename: file.originalFileName });
         if (!auth?.allowed) {
@@ -534,7 +535,7 @@ export default function ResultsScreen() {
             </Pressable>
           </View>
           {/* Restore Download authorization */}
-          {!isPro && (
+          {!hasPremium && (
             <View className="mt-3">
               <Pressable
                 onPress={async () => {

@@ -38,6 +38,8 @@ export default function MasteringScreen() {
   const [loadingTips, setLoadingTips] = useState(false);
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
+  const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
+  const hasPremium = isPro || isUnlimited; // Any paid tier
 
   useEffect(() => {
     if (!file) {
@@ -114,10 +116,10 @@ export default function MasteringScreen() {
   };
 
   const handlePickReferenceTrack = async () => {
-    if (!isPro) {
+    if (!hasPremium) {
       Alert.alert(
-        'Pro Feature',
-        'Reference track upload is available for Pro users. Upgrade now to unlock this feature.',
+        'Premium Feature',
+        'Reference track upload is available for Pro and Unlimited users. Upgrade now to unlock this feature.',
         [
           { text: 'Maybe Later', style: 'cancel' },
           { text: 'Upgrade', onPress: () => navigation.navigate('Subscriptions') },
@@ -418,9 +420,9 @@ export default function MasteringScreen() {
           <View className="mx-6 mb-6">
             <View className="flex-row items-center justify-between mb-3">
               <Text className="text-white text-lg font-semibold">Reference Track</Text>
-              {!isPro && (
+              {!hasPremium && (
                 <View className="bg-purple-600 px-3 py-1 rounded-full">
-                  <Text className="text-white text-xs font-bold">PRO</Text>
+                  <Text className="text-white text-xs font-bold">PREMIUM</Text>
                 </View>
               )}
             </View>
@@ -451,28 +453,28 @@ export default function MasteringScreen() {
               <Pressable
                 onPress={handlePickReferenceTrack}
                 className={`rounded-2xl p-5 border-2 border-dashed mb-4 ${
-                  isPro ? 'bg-purple-600/5 border-purple-600' : 'bg-gray-900 border-gray-700'
+                  hasPremium ? 'bg-purple-600/5 border-purple-600' : 'bg-gray-900 border-gray-700'
                 }`}
               >
                 <View className="items-center">
                   <View className={`w-16 h-16 rounded-full items-center justify-center mb-3 ${
-                    isPro ? 'bg-purple-600/20' : 'bg-gray-800'
+                    hasPremium ? 'bg-purple-600/20' : 'bg-gray-800'
                   }`}>
                     <Ionicons 
-                      name={isPro ? "cloud-upload" : "lock-closed"} 
+                      name={hasPremium ? "cloud-upload" : "lock-closed"} 
                       size={32} 
-                      color={isPro ? "#9333EA" : "#6B7280"} 
+                      color={hasPremium ? "#9333EA" : "#6B7280"} 
                     />
                   </View>
                   <Text className={`text-base font-semibold mb-1 ${
-                    isPro ? 'text-white' : 'text-gray-400'
+                    hasPremium ? 'text-white' : 'text-gray-400'
                   }`}>
-                    {isPro ? 'Upload Reference Track (Optional)' : 'Reference Track Upload'}
+                    {hasPremium ? 'Upload Reference Track (Optional)' : 'Reference Track Upload'}
                   </Text>
                   <Text className="text-gray-500 text-xs text-center">
-                    {isPro 
+                    {hasPremium 
                       ? 'Upload a professionally enhanced reference song to match its sonic characteristics'
-                      : 'Upgrade to Pro to unlock reference-based enhancement'
+                      : 'Upgrade to Premium to unlock reference-based enhancement'
                     }
                   </Text>
                 </View>
