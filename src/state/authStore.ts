@@ -341,6 +341,46 @@ export const useAuthStore = create<AuthState>()(
             .single();
 
           if (error || !profile) {
+            // If profile doesn't exist, create it
+            if (error?.code === 'PGRST116') {
+              console.log('📝 Creating missing profile during refresh...');
+              const { data: newProfile, error: createError } = await supabase
+                .from('users')
+                .upsert({
+                  id: authUser.id,
+                  email: authUser.email,
+                  name: authUser.email?.split('@')[0] || 'User',
+                  subscription_status: 'free',
+                  subscription_tier: 'free',
+                  enhancements_this_month: 0,
+                }, {
+                  onConflict: 'id',
+                  ignoreDuplicates: false
+                })
+                .select()
+                .single();
+
+              if (createError || !newProfile) {
+                console.error('❌ Failed to create profile during refresh:', createError);
+                set({ user: null, isAuthenticated: false });
+                return;
+              }
+
+              const user: User = {
+                id: newProfile.id,
+                email: newProfile.email,
+                name: newProfile.name,
+                subscriptionStatus: newProfile.subscription_status,
+                subscriptionTier: newProfile.subscription_tier,
+                subscriptionId: newProfile.subscription_id,
+                enhancementsThisMonth: newProfile.enhancements_this_month,
+                createdAt: newProfile.created_at,
+              };
+
+              set({ user, isAuthenticated: true });
+              return;
+            }
+
             console.error('Failed to refresh user:', error);
             set({ user: null, isAuthenticated: false });
             return;
