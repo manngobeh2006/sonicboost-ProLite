@@ -137,9 +137,9 @@ export default function LoginScreen() {
               <View className="w-20 h-20 bg-purple-600 rounded-2xl items-center justify-center mb-4">
                 <Ionicons name="musical-notes" size={40} color="white" />
               </View>
-              <Text className="text-white text-3xl font-bold">AudioMaster</Text>
+              <Text className="text-white text-3xl font-bold">SonicBoost ProLite</Text>
               <Text className="text-gray-400 text-base mt-2">
-                Professional Sonic Enhancement
+                AI-Powered Audio Enhancement
               </Text>
             </View>
 

@@ -168,6 +168,11 @@ export const useAuthStore = create<AuthState>()(
           const { data, error } = await supabase.auth.signUp({
             email,
             password,
+            options: {
+              data: {
+                name: name,
+              },
+            },
           });
 
           if (error) {
@@ -192,33 +197,25 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (data.user) {
-            // Create user profile in users table
+            // Wait a moment for the database trigger to create the profile
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Fetch the user profile created by the trigger
             const { data: profile, error: profileError } = await supabase
               .from('users')
-              .insert({
-                id: data.user.id,
-                email: data.user.email,
-                name,
-                subscription_status: 'free',
-                subscription_tier: 'free',
-                enhancements_this_month: 0,
-              })
-              .select()
+              .select('*')
+              .eq('id', data.user.id)
               .single();
 
             if (profileError) {
-              console.error('❌ Profile creation error:', profileError);
-
-              // Handle duplicate email error specifically
-              if (profileError.code === '23505') {
-                return { 
-                  success: false, 
-                  error: 'An account with this email already exists. Please login instead.',
-                  shouldRedirectToLogin: true
-                };
-              }
-
-              return { success: false, error: 'Failed to create user profile' };
+              console.error('❌ Profile fetch error after signup:', profileError);
+              
+              // If profile doesn't exist yet, return success but note it will be created
+              console.log('⏳ Profile will be created by database trigger');
+              return { 
+                success: true,
+                error: undefined
+              };
             }
 
             const user: User = {

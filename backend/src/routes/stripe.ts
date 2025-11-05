@@ -55,8 +55,8 @@ router.post('/create-checkout-session', checkoutLimiter, authenticateToken, asyn
         },
       ],
       mode: 'subscription',
-      success_url: process.env.APP_URL || 'https://example.com/payment-success?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: process.env.APP_URL || 'https://example.com/payment-cancel',
+      success_url: 'https://sonicboost-app.one-clickmaster.com/payment-success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'https://sonicboost-app.one-clickmaster.com/payment-cancel',
       client_reference_id: userId,
       metadata: {
         userId,
@@ -120,8 +120,8 @@ router.post('/one-time-checkout', checkoutLimiter, authenticateToken, async (req
           quantity: 1,
         },
       ],
-      success_url: process.env.APP_URL ? `${process.env.APP_URL}?order_id=${order.id}` : `https://example.com/payment-success?order_id=${order.id}`,
-      cancel_url: process.env.APP_URL || 'https://example.com/payment-cancel',
+      success_url: `https://sonicboost-app.one-clickmaster.com/payment-success?order_id=${order.id}`,
+      cancel_url: 'https://sonicboost-app.one-clickmaster.com/payment-cancel',
       client_reference_id: req.user!.userId,
       metadata: {
         userId: req.user!.userId,
@@ -183,7 +183,7 @@ router.post('/create-portal-session', authenticateToken, async (req: Request, re
 
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.customer as string,
-      return_url: `${process.env.APP_URL || 'https://example.com'}/profile`,
+      return_url: 'https://sonicboost-app.one-clickmaster.com',
     });
 
     console.log('[Portal] Portal session created successfully');

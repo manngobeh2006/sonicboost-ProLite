@@ -12,25 +12,8 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 
 export default function ProfileScreen() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { user, logout, simulateProUpgrade } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [loading, setLoading] = useState(false);
-
-  const handleDemoUpgrade = () => {
-    Alert.alert(
-      'Demo Mode',
-      'Since the backend is offline, would you like to simulate Pro features for testing?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Enable Pro (Demo)',
-          onPress: () => {
-            simulateProUpgrade();
-            Alert.alert('Success', 'Pro features enabled! This is demo mode only.');
-          },
-        },
-      ]
-    );
-  };
 
   const handleManageSubscription = async () => {
     // Check if user has an active subscription
@@ -128,8 +111,8 @@ export default function ProfileScreen() {
       '• One-click sonic enhancement\n' +
       '• AI-powered audio processing\n' +
       '• Professional-grade results\n' +
-      '• Support for all genres\n\n'
-      '👨\u200d💻 Developer:\n' +
+      '• Support for all genres\n\n' +
+      '👨‍💻 Developer:\n' +
       'Emmanuel Ngobeh\n\n' +
       '📧 Contact: manngobeh2006@gmail.com\n\n' +
       '🔒 Your privacy matters. We never share your audio files.\n\n' +
@@ -184,7 +167,7 @@ export default function ProfileScreen() {
             <View className={`${getSubscriptionBadgeColor()} px-4 py-2 rounded-full flex-row items-center`}>
               <Ionicons name="star" size={16} color="white" />
               <Text className="text-white text-sm font-semibold ml-2 uppercase">
-                {user?.subscriptionStatus} Plan
+                {user?.subscriptionTier || 'Free'} Plan
               </Text>
             </View>
           </View>
@@ -252,25 +235,6 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={20} color="#6B7280" />
             )}
           </Pressable>
-
-          {/* Demo Mode Button (for testing without backend) */}
-          {user?.subscriptionTier !== 'pro' && (
-            <Pressable 
-              onPress={handleDemoUpgrade}
-              className="bg-blue-600/10 rounded-2xl p-4 flex-row items-center justify-between border border-blue-600/30 active:opacity-70"
-            >
-              <View className="flex-row items-center">
-                <View className="w-10 h-10 bg-blue-600/20 rounded-full items-center justify-center mr-3">
-                  <Ionicons name="flask" size={20} color="#3B82F6" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-white text-base">Test Pro Features (Demo)</Text>
-                  <Text className="text-blue-400 text-xs mt-0.5">For testing without backend</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#3B82F6" />
-            </Pressable>
-          )}
         </View>
 
         {/* Settings */}
