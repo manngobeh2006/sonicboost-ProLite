@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, Alert, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../state/authStore';
 import { apiClient } from '../api/backend';
@@ -12,8 +12,16 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 
 export default function ProfileScreen() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { user, logout } = useAuthStore();
+  const { user, logout, refreshUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
+
+  // Auto-refresh user data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('📱 Profile screen focused - refreshing user data...');
+      refreshUser();
+    }, [refreshUser])
+  );
 
   const handleManageSubscription = async () => {
     // Check if user has an active subscription

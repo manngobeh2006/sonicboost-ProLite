@@ -680,17 +680,20 @@ export default function ResultsScreen() {
               <Text className="text-purple-200 text-xs mt-1">Starting at $11.99/mo</Text>
             </Pressable>
 
-            <Pressable
-              onPress={startOneTimePurchase}
-              disabled={isCreatingCheckout}
-              className="bg-gray-800 rounded-2xl py-4 items-center mb-3 active:opacity-80 border border-gray-700"
-            >
-              {isCreatingCheckout ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-white text-base font-semibold">Pay Once - $4.99</Text>
-              )}
-            </Pressable>
+            {/* Only show one-time payment for free users */}
+            {!hasPremium && (
+              <Pressable
+                onPress={startOneTimePurchase}
+                disabled={isCreatingCheckout}
+                className="bg-gray-800 rounded-2xl py-4 items-center mb-3 active:opacity-80 border border-gray-700"
+              >
+                {isCreatingCheckout ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="text-white text-base font-semibold">Pay Once - $4.99</Text>
+                )}
+              </Pressable>
+            )}
 
             <Pressable
               onPress={() => setShowUpgradeModal(false)}

@@ -210,12 +210,22 @@ export const useAuthStore = create<AuthState>()(
             if (profileError) {
               console.error('❌ Profile fetch error after signup:', profileError);
               
-              // If profile doesn't exist yet, return success but note it will be created
-              console.log('⏳ Profile will be created by database trigger');
-              return { 
-                success: true,
-                error: undefined
+              // If profile doesn't exist yet, create minimal user object from auth data
+              console.log('⏳ Profile will be created by database trigger, creating minimal user...');
+              const minimalUser: User = {
+                id: data.user.id,
+                email: data.user.email!,
+                name: name,
+                subscriptionStatus: 'free',
+                subscriptionTier: 'free',
+                subscriptionId: undefined,
+                enhancementsThisMonth: 0,
+                createdAt: new Date().toISOString(),
               };
+              
+              console.log('✅ Signup successful with minimal profile');
+              set({ user: minimalUser, isAuthenticated: true });
+              return { success: true };
             }
 
             const user: User = {
