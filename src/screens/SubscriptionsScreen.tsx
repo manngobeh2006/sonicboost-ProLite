@@ -88,6 +88,11 @@ export default function SubscriptionsScreen() {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
 
+  // Check if user has premium subscription
+  const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
+  const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
+  const hasPremium = isPro || isUnlimited;
+
   const handleSubscribe = async (priceId: string | null, planName: string) => {
     if (!priceId) {
       // Free plan - already on it
@@ -175,7 +180,13 @@ export default function SubscriptionsScreen() {
 
         {/* Plans */}
         <View className="px-6 pb-8">
-          {PLANS.map((plan) => {
+          {PLANS.filter(plan => {
+            // Hide one-time payment for Pro/Unlimited users
+            if (hasPremium && plan.id === 'single') {
+              return false;
+            }
+            return true;
+          }).map((plan) => {
             const isCurrentPlan = getCurrentPlan() === plan.id;
 
             return (
