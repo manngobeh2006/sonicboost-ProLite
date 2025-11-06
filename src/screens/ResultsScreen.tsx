@@ -617,7 +617,7 @@ export default function ResultsScreen() {
             >
               <Text className="text-white text-base font-semibold">✨ AI Revision</Text>
               <Text className="text-blue-200 text-xs mt-1">
-                {3 - ((file as any).revisionsUsed || 0)} revisions remaining
+                3 revisions per song
               </Text>
             </Pressable>
           )}
