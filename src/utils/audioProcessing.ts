@@ -232,12 +232,16 @@ async function detectGenreFromFilename(filename: string): Promise<AudioGenre> {
       // Validate it's a known genre
       const validGenres: AudioGenre[] = ['pop', 'rock', 'hiphop', 'electronic', 'jazz', 'classical', 'acoustic', 'vocal', 'podcast'];
       if (detectedGenre && validGenres.includes(detectedGenre as AudioGenre)) {
-        console.log(`AI detected genre: ${detectedGenre}`);
+        console.log(`✅ AI detected genre: ${detectedGenre}`);
         return detectedGenre as AudioGenre;
       }
+    } else {
+      // Log error to backend only, don't show to user
+      console.error('[Backend] OpenAI genre detection failed:', response.status, await response.text().catch(() => 'no body'));
     }
   } catch (error) {
-    console.log('AI genre detection failed, using unknown');
+    // Log error to backend only, don't show to user
+    console.error('[Backend] AI genre detection error:', error);
   }
   
   return 'unknown';

@@ -261,7 +261,7 @@ export default function ResultsScreen() {
     }
 
     // Check revision limit (3 per song for unlimited users)
-    const revisionsUsed = (file as any).revisionsUsed || 0;
+    const revisionsUsed = (file as any).revisionUsed || 0;
     if (revisionsUsed >= 3) {
       Alert.alert(
         'Revision Limit Reached',
@@ -311,14 +311,15 @@ export default function ResultsScreen() {
 
       // Update file with new settings and increment revision count
       const updatedRevisionsCount = revisionsUsed + 1;
-      // @ts-ignore
       useAudioStore.getState().updateFile(file.id, { 
         masteringSettings: newSettings, 
-        revisionsUsed: updatedRevisionsCount 
+        revisionUsed: updatedRevisionsCount > 0 
       });
 
       // Reload the audio player with updated file
-      await loadAudio(file.masteredUri, 'mastered');
+      if (file.masteredUri) {
+        await loadAudio(file.masteredUri, 'mastered');
+      }
       setCurrentVersion('mastered');
 
       setShowRevisionModal(false);

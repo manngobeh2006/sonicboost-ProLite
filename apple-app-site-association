@@ -1,0 +1,21 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "YOURTEAMID.com.sonicboost.prolite",
+        "paths": [
+          "/payment-success",
+          "/payment-cancel",
+          "/reset-password",
+          "*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "YOURTEAMID.com.sonicboost.prolite"
+    ]
+  }
+}
