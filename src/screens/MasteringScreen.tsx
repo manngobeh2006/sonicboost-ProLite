@@ -8,6 +8,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuthStore } from '../state/authStore';
 import { useAudioStore } from '../state/audioStore';
+import { useAudioPlaybackStore } from '../state/audioPlaybackStore';
 import { RootStackParamList } from '../navigation/types';
 import { processAudioFile, analyzeAudioFile, calculateIntelligentMastering, getGenreDisplayName, analyzeReferenceTrack, calculateReferenceBasedMastering, AudioAnalysis, MasteringSettings } from '../utils/audioProcessing';
 import { parseAudioCommand, applyAudioCommand, generateAudioAnalysisDescription, generateMixingTips, generatePreMasteringTips } from '../utils/audioAI';
@@ -21,8 +22,9 @@ export default function MasteringScreen() {
   const { fileId } = route.params;
   const { user } = useAuthStore();
   
-  const { files, updateFile } = useAudioStore();
+  const { files, updateFile, setLastCompletedFileId } = useAudioStore();
   const file = files.find((f) => f.id === fileId);
+  const { stopAndClearAudio } = useAudioPlaybackStore();
 
   const [processing, setProcessing] = useState(false);
   const [currentStage, setCurrentStage] = useState<string>('');
@@ -164,6 +166,9 @@ export default function MasteringScreen() {
   const simulateSonicBoostProcessing = async () => {
     if (!file) return;
 
+    // Stop any currently playing audio preview
+    await stopAndClearAudio();
+
     setProcessing(true);
     updateFile(file.id, { status: 'processing', progress: 0 });
 
@@ -265,6 +270,9 @@ export default function MasteringScreen() {
         tempo: audioAnalysisResult.tempo,
         masteringSettings: masteringSettings,
       });
+
+      // Track this as the last completed file for navigation
+      setLastCompletedFileId(file.id);
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 

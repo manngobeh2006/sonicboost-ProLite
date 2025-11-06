@@ -27,9 +27,11 @@ export interface AudioFile {
 interface AudioState {
   files: AudioFile[];
   currentFile: AudioFile | null;
+  lastCompletedFileId: string | null;
   addFile: (file: Omit<AudioFile, 'id' | 'createdAt'>) => AudioFile;
   updateFile: (id: string, updates: Partial<AudioFile>) => void;
   setCurrentFile: (file: AudioFile | null) => void;
+  setLastCompletedFileId: (id: string | null) => void;
   getFilesByUserId: (userId: string) => AudioFile[];
   deleteFile: (id: string) => void;
 }
@@ -39,6 +41,7 @@ export const useAudioStore = create<AudioState>()(
     (set, get) => ({
       files: [],
       currentFile: null,
+      lastCompletedFileId: null,
 
       addFile: (file) => {
         const newFile: AudioFile = {
@@ -69,6 +72,10 @@ export const useAudioStore = create<AudioState>()(
 
       setCurrentFile: (file) => {
         set({ currentFile: file });
+      },
+
+      setLastCompletedFileId: (id) => {
+        set({ lastCompletedFileId: id });
       },
 
       getFilesByUserId: (userId) => {

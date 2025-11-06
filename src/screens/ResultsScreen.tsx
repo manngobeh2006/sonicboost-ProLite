@@ -9,6 +9,7 @@ import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../state/authStore';
 import { apiClient } from '../api/backend';
 import { useAudioStore } from '../state/audioStore';
+import { useAudioPlaybackStore } from '../state/audioPlaybackStore';
 import { RootStackParamList } from '../navigation/types';
 import { createMasteredSound, createOriginalSound, getGenreDisplayName, AudioGenre, analyzeAudioFile, calculateIntelligentMastering, processAudioFile } from '../utils/audioProcessing';
 import { parseAudioCommand, applyAudioCommand } from '../utils/audioAI';
@@ -26,6 +27,7 @@ export default function ResultsScreen() {
 
   const { files } = useAudioStore();
   const file = files.find((f) => f.id === fileId);
+  const { setSound: setGlobalSound, stopAndClearAudio, setIsPlaying: setGlobalIsPlaying } = useAudioPlaybackStore();
 
   const [currentVersion, setCurrentVersion] = useState<AudioVersion>('mastered');
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -57,9 +59,12 @@ export default function ResultsScreen() {
 
   useEffect(() => {
     return () => {
+      // Clean up local sound when leaving screen
       if (sound) {
         sound.unloadAsync();
       }
+      // Also clear global state
+      stopAndClearAudio();
     };
   }, [sound]);
 
@@ -105,6 +110,7 @@ export default function ResultsScreen() {
       newSound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
 
       setSound(newSound);
+      setGlobalSound(newSound, fileId);
       const status = await newSound.getStatusAsync();
       if (status.isLoaded && status.durationMillis) {
         setDuration(status.durationMillis);
@@ -121,9 +127,11 @@ export default function ResultsScreen() {
     if (status.isLoaded) {
       setPosition(status.positionMillis);
       setIsPlaying(status.isPlaying);
+      setGlobalIsPlaying(status.isPlaying);
 
       if (status.didJustFinish) {
         setIsPlaying(false);
+        setGlobalIsPlaying(false);
         setPosition(0);
       }
     }
@@ -159,6 +167,7 @@ export default function ResultsScreen() {
       await sound.stopAsync();
       await sound.unloadAsync();
       setSound(null);
+      setGlobalSound(null, null);
     }
 
     setCurrentVersion(version);

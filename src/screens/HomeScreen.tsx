@@ -9,6 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../state/authStore';
 import { useAudioStore } from '../state/audioStore';
+import { useAudioPlaybackStore } from '../state/audioPlaybackStore';
 import { RootStackParamList } from '../navigation/types';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -16,11 +17,19 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'H
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { user } = useAuthStore();
-  const { addFile } = useAudioStore();
+  const { addFile, lastCompletedFileId, files } = useAudioStore();
+  const { stopAndClearAudio } = useAudioPlaybackStore();
   const [loading, setLoading] = useState(false);
+
+  // Check if there's a recent completed file to return to
+  const lastCompletedFile = lastCompletedFileId ? files.find(f => f.id === lastCompletedFileId) : null;
+  const canReturnToResults = lastCompletedFile && lastCompletedFile.status === 'completed';
 
   const handlePickAudioFile = async () => {
     try {
+      // Stop any currently playing audio preview
+      await stopAndClearAudio();
+      
       setLoading(true);
 
       const result = await DocumentPicker.getDocumentAsync({
@@ -96,6 +105,29 @@ export default function HomeScreen() {
             Boost clarity, depth, and loudness for a more powerful sound
           </Text>
         </View>
+
+        {/* Return to Last Results */}
+        {canReturnToResults && (
+          <View className="mx-6 mb-4">
+            <Pressable
+              onPress={() => navigation.navigate('Results', { fileId: lastCompletedFileId! })}
+              className="bg-purple-600/20 border-2 border-purple-600 rounded-2xl p-4 flex-row items-center justify-between active:opacity-80"
+            >
+              <View className="flex-row items-center flex-1">
+                <View className="w-12 h-12 bg-purple-600 rounded-xl items-center justify-center mr-3">
+                  <Ionicons name="headset" size={24} color="white" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-base font-semibold mb-1">Return to Last Results</Text>
+                  <Text className="text-purple-300 text-xs" numberOfLines={1}>
+                    {lastCompletedFile?.originalFileName}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#9333EA" />
+            </Pressable>
+          </View>
+        )}
 
         {/* Upload Card */}
         <View className="mx-6 mb-8">
