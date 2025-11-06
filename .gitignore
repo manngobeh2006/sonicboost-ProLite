@@ -121,4 +121,4 @@ backend/dist/
 
 # Temporary files
 *.tmp
-*.temp
+*.tempassets/*.png
