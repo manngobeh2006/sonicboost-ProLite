@@ -1,0 +1,51 @@
+# E2E Test: User Signup → Subscribe to Pro → Complete Payment
+appId: com.sonicboost.prolite
+---
+
+# Test: Complete user signup and subscription flow
+- launchApp
+- assertVisible: "SonicBoost ProLite"
+
+# Step 1: Navigate to Signup
+- tapOn: "Sign Up"
+- assertVisible: "Create Account"
+
+# Step 2: Fill signup form
+- tapOn: "Name"
+- inputText: "${TEST_NAME}"
+- tapOn: "Email"
+- inputText: "${TEST_EMAIL}"
+- tapOn: "Password"
+- inputText: "${TEST_PASSWORD}"
+
+# Step 3: Submit signup
+- tapOn: "Create Account"
+- waitForAnimationToEnd
+
+# Step 4: Verify home screen loads
+- assertVisible: "Boost Your Audio"
+- assertVisible: "Upload Audio"
+
+# Step 5: Navigate to subscriptions
+- tapOn: "Profile"
+- tapOn: "View Plans & Upgrade"
+
+# Step 6: Select Pro plan
+- assertVisible: "Pro"
+- assertVisible: "$11.99"
+- scroll:
+    direction: DOWN
+- tapOn: "Subscribe"  # Pro plan subscribe button
+
+# Step 7: Verify checkout redirect
+# Note: This opens browser - manual verification needed
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Step 8: After payment (return to app)
+- launchApp
+- tapOn: "Profile"
+
+# Step 9: Verify subscription updated
+- assertVisible: "PRO Plan"
+- assertVisible: "Manage Subscription"

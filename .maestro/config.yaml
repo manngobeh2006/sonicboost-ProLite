@@ -1,0 +1,9 @@
+# Maestro Configuration for SonicBoost ProLite E2E Tests
+# Install: curl -Ls "https://get.maestro.mobile.dev" | bash
+
+appId: com.sonicboost.prolite
+name: SonicBoost ProLite
+env:
+  TEST_EMAIL: "test@sonicboost.app"
+  TEST_PASSWORD: "TestPassword123"
+  TEST_NAME: "Test User"

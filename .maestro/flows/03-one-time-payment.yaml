@@ -1,0 +1,53 @@
+# E2E Test: Free User → Process Audio → One-Time Payment
+appId: com.sonicboost.prolite
+---
+
+# Test: Free user processes audio and makes one-time payment
+- launchApp
+- assertVisible: "SonicBoost ProLite"
+
+# Step 1: Login as free user
+- tapOn: "Email"
+- inputText: "free@sonicboost.app"
+- tapOn: "Password"
+- inputText: "FreeUser123"
+- tapOn: "Login"
+- waitForAnimationToEnd
+
+# Step 2: Upload audio file
+- tapOn: "Upload Audio"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Step 3: Select test audio file
+# Note: In real test, this would pick a file
+- tapOn: "Choose File"
+
+# Step 4: Wait for processing
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Step 5: Navigate to Results
+- assertVisible: "Results"
+- assertVisible: "Enhanced"
+
+# Step 6: Try to download (should show upgrade modal)
+- tapOn: "Download"
+- assertVisible: "Unlock Downloads"
+
+# Step 7: Select one-time payment option
+- assertVisible: "Pay Once - $4.99"
+- tapOn: "Pay Once - $4.99"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Step 8: Verify checkout opens (browser)
+# Note: Stripe checkout opens - manual payment verification needed
+
+# Step 9: Return to app after payment
+- launchApp
+- assertVisible: "Results"
+
+# Step 10: Verify download now works
+- tapOn: "Download"
+- assertVisible: "Download Enhanced Audio"

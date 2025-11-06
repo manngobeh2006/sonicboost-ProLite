@@ -1,0 +1,45 @@
+# E2E Test: Login → View Profile → Manage Subscription
+appId: com.sonicboost.prolite
+---
+
+# Test: Existing user login and subscription management
+- launchApp
+- assertVisible: "SonicBoost ProLite"
+
+# Step 1: Login with existing account
+- tapOn: "Email"
+- inputText: "${TEST_EMAIL}"
+- tapOn: "Password"
+- inputText: "${TEST_PASSWORD}"
+- tapOn: "Login"
+- waitForAnimationToEnd
+
+# Step 2: Verify home screen
+- assertVisible: "Boost Your Audio"
+- assertVisible: "Upload Audio"
+
+# Step 3: Navigate to profile
+- tapOn: "Profile"
+- assertVisible: "Profile"
+
+# Step 4: Verify user info
+- assertVisible: "${TEST_NAME}"
+- assertVisible: "${TEST_EMAIL}"
+
+# Step 5: Check subscription status
+- assertVisible: "PRO Plan"
+- assertVisible: "Manage Subscription"
+
+# Step 6: Tap manage subscription
+- tapOn: "Manage Subscription"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# Step 7: Verify portal opens (browser)
+# Note: Stripe portal opens in browser - manual verification
+
+# Step 8: Return to app and verify profile still accessible
+- launchApp
+- tapOn: "Profile"
+- assertVisible: "Profile"
+- assertVisible: "PRO Plan"
