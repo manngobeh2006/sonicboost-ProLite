@@ -29,7 +29,7 @@ router.get('/health/detailed', async (req: Request, res: Response): Promise<void
     uptime: process.uptime(),
     checks: {
       database: { status: 'unknown', latency: 0 },
-      stripe: { status: 'unknown' },
+      stripe: { status: 'unknown' } as { status: string; error?: string },
       environment: { status: 'unknown', missing: [] as string[] },
     },
   };
