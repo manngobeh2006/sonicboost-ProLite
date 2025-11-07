@@ -27,7 +27,7 @@ export default function ResultsScreen() {
 
   const { files } = useAudioStore();
   const file = files.find((f) => f.id === fileId);
-  const { stopAndClearAudio: stopGlobalAudio, setSound: setGlobalSound, currentFileId } = useAudioPlaybackStore();
+  const { stopAndClearAudio: stopGlobalAudio, setSound: setGlobalSound, setIsPlaying: setGlobalIsPlaying, currentFileId } = useAudioPlaybackStore();
 
   const [currentVersion, setCurrentVersion] = useState<AudioVersion>('mastered');
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -133,9 +133,12 @@ export default function ResultsScreen() {
     if (status.isLoaded) {
       setPosition(status.positionMillis);
       setIsPlaying(status.isPlaying);
+      // Sync with global state for mini-player
+      setGlobalIsPlaying(status.isPlaying);
 
       if (status.didJustFinish) {
         setIsPlaying(false);
+        setGlobalIsPlaying(false);
         setPosition(0);
       }
     }
@@ -155,8 +158,10 @@ export default function ResultsScreen() {
     try {
       if (isPlaying) {
         await sound.pauseAsync();
+        setGlobalIsPlaying(false);
       } else {
         await sound.playAsync();
+        setGlobalIsPlaying(true);
       }
     } catch (error) {
       // Silently handle playback errors - they're usually recoverable
@@ -211,6 +216,7 @@ export default function ResultsScreen() {
     setCurrentVersion(version);
     setPosition(0);
     setIsPlaying(false);
+    setGlobalIsPlaying(false);
     
     // Pre-load the new version for instant playback
     const uri = version === 'original' ? file?.originalUri : file?.masteredUri;
