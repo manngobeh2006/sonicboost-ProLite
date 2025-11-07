@@ -47,7 +47,10 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (error) {
-            console.error('❌ Login error:', error);
+            // Only log errors in development mode
+            if (__DEV__) {
+              console.log('Login failed:', error.message);
+            }
             
             // Provide more user-friendly error messages
             if (error.message.includes('Invalid login credentials')) {
@@ -72,7 +75,9 @@ export const useAuthStore = create<AuthState>()(
               .single();
 
             if (profileError) {
-              console.error('❌ Profile fetch error:', profileError);
+              if (__DEV__) {
+                console.log('Profile fetch error:', profileError.message);
+              }
 
               // If profile doesn't exist, create it
               if (profileError.code === 'PGRST116') {
@@ -94,10 +99,10 @@ export const useAuthStore = create<AuthState>()(
                   .single();
 
                 if (createError) {
-                  console.error('❌ Profile creation error:', createError);
-                  console.error('Error code:', createError.code);
-                  console.error('Error details:', createError.details);
-                  console.error('Error hint:', createError.hint);
+                  if (__DEV__) {
+                    console.log('Profile creation error:', createError.message);
+                    console.log('Error code:', createError.code);
+                  }
                   return { success: false, error: `Failed to create user profile: ${createError.message}` };
                 }
 
@@ -138,7 +143,9 @@ export const useAuthStore = create<AuthState>()(
 
           return { success: false, error: 'Login failed' };
         } catch (error: any) {
-          console.error('❌ Login error:', error);
+          if (__DEV__) {
+            console.log('Login error:', error.message);
+          }
           return { success: false, error: error.message || 'Invalid email or password' };
         }
       },
@@ -159,8 +166,10 @@ export const useAuthStore = create<AuthState>()(
             .single();
 
           if (existingUser) {
-            console.log('❌ Email already exists');
-            return { 
+            if (__DEV__) {
+              console.log('Email already exists');
+            }
+            return {
               success: false, 
               error: 'An account with this email already exists. Please login instead.',
               shouldRedirectToLogin: true
@@ -179,7 +188,9 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (error) {
-            console.error('❌ Signup error:', error);
+            if (__DEV__) {
+              console.log('Signup error:', error.message);
+            }
             
             // Check if it's a user already exists error
             if (error.message.includes('already registered') || error.message.includes('already exists') || error.message.includes('User already registered')) {
@@ -211,10 +222,12 @@ export const useAuthStore = create<AuthState>()(
               .single();
 
             if (profileError) {
-              console.error('❌ Profile fetch error after signup:', profileError);
+              if (__DEV__) {
+                console.log('Profile fetch error after signup:', profileError.message);
+                console.log('Profile will be created by database trigger, creating minimal user...');
+              }
               
               // If profile doesn't exist yet, create minimal user object from auth data
-              console.log('⏳ Profile will be created by database trigger, creating minimal user...');
               const minimalUser: User = {
                 id: data.user.id,
                 email: data.user.email!,
@@ -249,7 +262,9 @@ export const useAuthStore = create<AuthState>()(
 
           return { success: false, error: 'Signup failed' };
         } catch (error: any) {
-          console.error('❌ Signup error:', error);
+          if (__DEV__) {
+            console.log('Signup error:', error.message);
+          }
           return { success: false, error: error.message || 'Email already exists' };
         }
       },
@@ -263,7 +278,9 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (error) {
-            console.error('❌ Forgot password error:', error);
+            if (__DEV__) {
+              console.log('Forgot password error:', error.message);
+            }
 
             // Provide more user-friendly error messages
             if (error.message.includes('Invalid email')) {
@@ -281,7 +298,9 @@ export const useAuthStore = create<AuthState>()(
             message: 'If an account with this email exists, you will receive a password reset link.',
           };
         } catch (error: any) {
-          console.error('❌ Forgot password error:', error);
+          if (__DEV__) {
+            console.log('Forgot password error:', error.message);
+          }
           return { success: false, error: error.message || 'Failed to send reset email' };
         }
       },
@@ -299,7 +318,9 @@ export const useAuthStore = create<AuthState>()(
           });
 
           if (error) {
-            console.error('❌ Reset password error:', error);
+            if (__DEV__) {
+              console.log('Reset password error:', error.message);
+            }
 
             // Provide more user-friendly error messages
             if (error.message.includes('Password should be at least')) {
@@ -317,7 +338,9 @@ export const useAuthStore = create<AuthState>()(
             message: 'Password has been reset successfully. You can now login with your new password.',
           };
         } catch (error: any) {
-          console.error('❌ Reset password error:', error);
+          if (__DEV__) {
+            console.log('Reset password error:', error.message);
+          }
           return { success: false, error: error.message || 'Failed to reset password' };
         }
       },
@@ -386,7 +409,9 @@ export const useAuthStore = create<AuthState>()(
 
           return { success: false, error: response.error || 'Failed to update profile' };
         } catch (error: any) {
-          console.error('❌ Update profile error:', error);
+          if (__DEV__) {
+            console.log('Update profile error:', error.message);
+          }
           
           // Check if it's a backend connectivity error
           if (error.message?.includes('Network request failed') ||
@@ -440,7 +465,9 @@ export const useAuthStore = create<AuthState>()(
                   .single();
                 
                 if (updateError || !updatedProfile) {
-                  console.error('❌ Failed to update profile ID:', updateError);
+                  if (__DEV__) {
+                    console.log('Failed to update profile ID:', updateError?.message);
+                  }
                   // If update fails, just use the existing profile
                   const user: User = {
                     id: emailProfile.id,
@@ -486,7 +513,9 @@ export const useAuthStore = create<AuthState>()(
                 .single();
 
               if (createError || !newProfile) {
-                console.error('❌ Failed to create profile during refresh:', createError);
+                if (__DEV__) {
+                  console.log('Failed to create profile during refresh:', createError?.message);
+                }
                 set({ user: null, isAuthenticated: false });
                 return;
               }
@@ -506,7 +535,9 @@ export const useAuthStore = create<AuthState>()(
               return;
             }
 
-            console.error('Failed to refresh user:', error);
+            if (__DEV__) {
+              console.log('Failed to refresh user:', error?.message);
+            }
             set({ user: null, isAuthenticated: false });
             return;
           }
@@ -523,8 +554,10 @@ export const useAuthStore = create<AuthState>()(
           };
 
           set({ user, isAuthenticated: true });
-        } catch (error) {
-          console.error('Failed to refresh user:', error);
+        } catch (error: any) {
+          if (__DEV__) {
+            console.log('Failed to refresh user:', error?.message);
+          }
           set({ user: null, isAuthenticated: false });
         }
       },
