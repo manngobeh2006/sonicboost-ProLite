@@ -29,8 +29,14 @@ export const useAudioPlaybackStore = create<AudioPlaybackState>((set, get) => ({
       try {
         await currentSound.stopAsync();
         await currentSound.unloadAsync();
-      } catch (error) {
-        console.error('Error stopping audio:', error);
+      } catch (error: any) {
+        // Silently handle "sound not loaded" errors - they're expected when audio isn't playing
+        if (!error?.message?.includes('sound is not loaded')) {
+          // Only log unexpected errors in development
+          if (__DEV__) {
+            console.warn('Audio cleanup warning:', error?.message);
+          }
+        }
       }
     }
     set({ currentSound: null, isPlaying: false, currentFileId: null });

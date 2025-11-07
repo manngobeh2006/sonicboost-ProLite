@@ -121,7 +121,9 @@ export default function ResultsScreen() {
       }
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading audio:', error);
+      if (__DEV__) {
+        console.warn('Audio load warning:', (error as Error)?.message);
+      }
       Alert.alert('Error', 'Failed to load audio. Please try again.');
       setIsLoading(false);
     }
@@ -157,7 +159,10 @@ export default function ResultsScreen() {
         await sound.playAsync();
       }
     } catch (error) {
-      console.error('Error toggling playback:', error);
+      // Silently handle playback errors - they're usually recoverable
+      if (__DEV__) {
+        console.warn('Playback warning:', (error as Error)?.message);
+      }
     }
   };
 
@@ -231,7 +236,9 @@ export default function ResultsScreen() {
         UTI: format === 'mp3' ? 'public.mp3' : 'public.wav',
       });
     } catch (error) {
-      console.error('Error sharing file:', error);
+      if (__DEV__) {
+        console.warn('Share error:', (error as Error)?.message);
+      }
       Alert.alert('Error', 'Failed to download file');
     }
   };
@@ -340,7 +347,9 @@ export default function ResultsScreen() {
         `Your audio has been reprocessed with: "${revisionCommand}"\n\n${remainingRevisions} revision${remainingRevisions !== 1 ? 's' : ''} remaining for this song.`
       );
     } catch (e: any) {
-      console.error('Revision error:', e);
+      if (__DEV__) {
+        console.warn('Revision warning:', e?.message);
+      }
       Alert.alert('Revision failed', e?.message || 'Could not apply revision. Please try again.');
     } finally {
       setIsRunningRevision(false);

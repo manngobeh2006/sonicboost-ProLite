@@ -89,8 +89,12 @@ export const getOpenAITextResponse = async (messages: AIMessage[], options?: AIR
         totalTokens: response.usage?.total_tokens || 0,
       },
     };
-  } catch (error) {
-    console.error("OpenAI API Error:", error);
+  } catch (error: any) {
+    // Silently handle rate limits
+    const isRateLimit = error?.message?.includes('429') || error?.message?.includes('rate_limit');
+    if (!isRateLimit && __DEV__) {
+      console.warn('OpenAI API warning:', error?.message?.substring(0, 100));
+    }
     throw error;
   }
 };
@@ -130,8 +134,10 @@ export const getGrokTextResponse = async (messages: AIMessage[], options?: AIReq
         totalTokens: response.usage?.total_tokens || 0,
       },
     };
-  } catch (error) {
-    console.error("Grok API Error:", error);
+  } catch (error: any) {
+    if (__DEV__) {
+      console.warn('Grok API warning:', error?.message?.substring(0, 100));
+    }
     throw error;
   }
 };
@@ -178,8 +184,20 @@ export const getGPTMiniTextResponse = async (
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('GPT-MINI API Error Response:', errorText);
-      throw new Error(`GPT-MINI API request failed: ${response.status} - ${errorText}`);
+      
+      // Silently handle rate limit errors - they're expected on free tier
+      const isRateLimit = response.status === 429 || errorText.includes('rate_limit_exceeded');
+      if (isRateLimit) {
+        // Only log in development mode
+        if (__DEV__) {
+          console.log('OpenAI rate limit reached, using fallback');
+        }
+      } else if (__DEV__) {
+        // Only log non-rate-limit errors in dev
+        console.warn('GPT-MINI API Error:', response.status);
+      }
+      
+      throw new Error(`GPT-MINI API request failed: ${response.status}`);
     }
 
     const responseText = await response.text();
@@ -194,7 +212,9 @@ export const getGPTMiniTextResponse = async (
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('Failed to parse GPT-MINI response:', responseText.substring(0, 200));
+      if (__DEV__) {
+        console.warn('Failed to parse GPT-MINI response');
+      }
       throw new Error('Invalid JSON response from GPT-MINI API');
     }
 
@@ -205,18 +225,15 @@ export const getGPTMiniTextResponse = async (
 
     // Check if the request was refused
     if (refusal) {
-      console.error('GPT-4o-mini refused request:', refusal);
+      if (__DEV__) {
+        console.warn('GPT-4o-mini refused request:', refusal);
+      }
       throw new Error(`GPT-4o-mini refused: ${refusal}`);
     }
 
     // Check for empty content (common with reasoning models)
     if (!content || content.trim() === '') {
-      // Log once with minimal detail - this is expected behavior for some requests
-      if (finishReason === 'length') {
-        console.log('AI response truncated, using fallback');
-      } else {
-        console.log('AI response empty, using fallback');
-      }
+      // Silently throw - fallback handling will catch this
       throw new Error('No content in GPT-4o-mini response');
     }
 
@@ -228,8 +245,12 @@ export const getGPTMiniTextResponse = async (
         totalTokens: data.usage?.total_tokens || 0,
       },
     };
-  } catch (error) {
-    console.error('GPT-MINI API Error:', error);
+  } catch (error: any) {
+    // Silently handle rate limits and expected errors
+    const isRateLimit = error?.message?.includes('429') || error?.message?.includes('rate_limit');
+    if (!isRateLimit && __DEV__) {
+      console.warn('GPT-MINI API warning:', error?.message?.substring(0, 100));
+    }
     throw error;
   }
 };

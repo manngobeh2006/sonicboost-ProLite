@@ -163,8 +163,10 @@ export async function analyzeAudioFile(uri: string, filename: string): Promise<A
       ...analysis,
     };
   } catch (error) {
-    console.error('Error analyzing audio:', error);
-    // Return default analysis
+    // Silently return default analysis
+    if (__DEV__) {
+      console.log('Using default audio analysis');
+    }
     return {
       duration: 180,
       tempo: 120,
@@ -236,12 +238,16 @@ async function detectGenreFromFilename(filename: string): Promise<AudioGenre> {
         return detectedGenre as AudioGenre;
       }
     } else {
-      // Log error to backend only, don't show to user
-      console.error('[Backend] OpenAI genre detection failed:', response.status, await response.text().catch(() => 'no body'));
+      // Silently handle API errors - rate limits are expected on free tier
+      if (__DEV__) {
+        const isRateLimit = response.status === 429;
+        if (!isRateLimit) {
+          console.log('OpenAI genre detection unavailable, using keyword detection');
+        }
+      }
     }
   } catch (error) {
-    // Log error to backend only, don't show to user
-    console.error('[Backend] AI genre detection error:', error);
+    // Silently fall back to keyword detection
   }
   
   return 'unknown';
