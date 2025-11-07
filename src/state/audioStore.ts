@@ -28,10 +28,12 @@ interface AudioState {
   files: AudioFile[];
   currentFile: AudioFile | null;
   lastCompletedFileId: string | null;
+  hasProcessedInSession: boolean; // Track if user has processed a file in THIS session
   addFile: (file: Omit<AudioFile, 'id' | 'createdAt'>) => AudioFile;
   updateFile: (id: string, updates: Partial<AudioFile>) => void;
   setCurrentFile: (file: AudioFile | null) => void;
   setLastCompletedFileId: (id: string | null) => void;
+  setHasProcessedInSession: (value: boolean) => void;
   getFilesByUserId: (userId: string) => AudioFile[];
   deleteFile: (id: string) => void;
 }
@@ -42,6 +44,7 @@ export const useAudioStore = create<AudioState>()(
       files: [],
       currentFile: null,
       lastCompletedFileId: null,
+      hasProcessedInSession: false,
 
       addFile: (file) => {
         const newFile: AudioFile = {
@@ -76,6 +79,10 @@ export const useAudioStore = create<AudioState>()(
 
       setLastCompletedFileId: (id) => {
         set({ lastCompletedFileId: id });
+      },
+
+      setHasProcessedInSession: (value) => {
+        set({ hasProcessedInSession: value });
       },
 
       getFilesByUserId: (userId) => {

@@ -9,6 +9,7 @@ import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../state/authStore';
 import { apiClient } from '../api/backend';
 import { useAudioStore } from '../state/audioStore';
+import { useAudioPlaybackStore } from '../state/audioPlaybackStore';
 import { RootStackParamList } from '../navigation/types';
 import { createMasteredSound, createOriginalSound, getGenreDisplayName, AudioGenre, analyzeAudioFile, calculateIntelligentMastering, processAudioFile } from '../utils/audioProcessing';
 import { parseAudioCommand, applyAudioCommand } from '../utils/audioAI';
@@ -26,6 +27,7 @@ export default function ResultsScreen() {
 
   const { files } = useAudioStore();
   const file = files.find((f) => f.id === fileId);
+  const { stopAndClearAudio: stopGlobalAudio, setSound: setGlobalSound, currentFileId } = useAudioPlaybackStore();
 
   const [currentVersion, setCurrentVersion] = useState<AudioVersion>('mastered');
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -57,14 +59,19 @@ export default function ResultsScreen() {
 
   useEffect(() => {
     return () => {
-      if (sound) {
+      // Only clean up if this screen's audio is the one currently playing
+      if (sound && currentFileId === fileId) {
         sound.unloadAsync();
+        stopGlobalAudio();
       }
     };
-  }, [sound]);
+  }, [sound, currentFileId, fileId]);
 
   const loadAudio = async (uri: string, version: AudioVersion) => {
     try {
+      // CRITICAL: Stop any globally playing audio first (prevents multiple audio playback)
+      await stopGlobalAudio();
+      
       if (sound) {
         await sound.unloadAsync();
       }
@@ -105,6 +112,9 @@ export default function ResultsScreen() {
       newSound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
 
       setSound(newSound);
+      // Register this sound globally so other screens know to stop it
+      setGlobalSound(newSound, fileId);
+      
       const status = await newSound.getStatusAsync();
       if (status.isLoaded && status.durationMillis) {
         setDuration(status.durationMillis);

@@ -17,13 +17,13 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'H
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { user } = useAuthStore();
-  const { addFile, lastCompletedFileId, files } = useAudioStore();
+  const { addFile, lastCompletedFileId, files, hasProcessedInSession } = useAudioStore();
   const { stopAndClearAudio } = useAudioPlaybackStore();
   const [loading, setLoading] = useState(false);
 
   // Check if there's a recent completed file to return to
   const lastCompletedFile = lastCompletedFileId ? files.find(f => f.id === lastCompletedFileId) : null;
-  const canReturnToResults = files.length > 0 && lastCompletedFile && lastCompletedFile.status === 'completed';
+  const canReturnToResults = hasProcessedInSession && lastCompletedFile && lastCompletedFile.status === 'completed';
 
   const handlePickAudioFile = async () => {
     try {

@@ -22,7 +22,7 @@ export default function MasteringScreen() {
   const { fileId } = route.params;
   const { user } = useAuthStore();
   
-  const { files, updateFile, setLastCompletedFileId } = useAudioStore();
+  const { files, updateFile, setLastCompletedFileId, setHasProcessedInSession } = useAudioStore();
   const file = files.find((f) => f.id === fileId);
   const { stopAndClearAudio } = useAudioPlaybackStore();
 
@@ -273,6 +273,7 @@ export default function MasteringScreen() {
 
       // Track this as the last completed file for navigation
       setLastCompletedFileId(file.id);
+      setHasProcessedInSession(true); // Mark that user has processed a file in this session
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
