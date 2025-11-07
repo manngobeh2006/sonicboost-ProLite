@@ -53,7 +53,12 @@ export default function ResultsScreen() {
       navigation.goBack();
     } else if (file.masteredUri) {
       // Pre-load mastered audio on screen open
-      loadAudio(file.masteredUri, 'mastered');
+      console.log('📱 Results screen opened, loading audio:', file.masteredUri);
+      loadAudio(file.masteredUri, 'mastered').catch(err => {
+        console.error('❌ Failed to pre-load audio:', err);
+      });
+    } else {
+      console.warn('⚠️ No masteredUri found for file:', file.id);
     }
   }, [file, navigation]);
 
@@ -138,7 +143,17 @@ export default function ResultsScreen() {
   };
 
   const togglePlayPause = async () => {
-    if (!sound) return;
+    // If sound isn't loaded yet, load it first
+    if (!sound) {
+      console.log('Sound not loaded, loading now...');
+      const uri = currentVersion === 'original' ? file?.originalUri : file?.masteredUri;
+      if (uri) {
+        await loadAudio(uri, currentVersion);
+        // Sound will be ready after this, but don't auto-play
+        // Let user click again to play
+      }
+      return;
+    }
 
     try {
       if (isPlaying) {
