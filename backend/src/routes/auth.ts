@@ -279,4 +279,82 @@ router.get('/me', authenticateToken, async (req: Request, res: Response): Promis
   }
 });
 
+// Update profile (name and/or email)
+router.patch('/profile', authenticateToken, sanitizeInputs, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name, email } = req.body;
+    const userId = req.user!.userId;
+
+    if (!name && !email) {
+      res.status(400).json({ success: false, error: 'At least one field (name or email) is required' });
+      return;
+    }
+
+    // Validate email if provided
+    if (email && !isValidEmail(email)) {
+      res.status(400).json({ success: false, error: 'Invalid email format' });
+      return;
+    }
+
+    // Check if email already exists (if changing email)
+    if (email) {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .neq('id', userId)
+        .single();
+
+      if (existingUser) {
+        res.status(400).json({ success: false, error: 'Email already in use by another account' });
+        return;
+      }
+    }
+
+    // Build update object
+    const updates: any = {};
+    if (name) updates.name = name.trim();
+    if (email) updates.email = email.toLowerCase().trim();
+
+    // Update user profile
+    const { data: updatedUser, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error || !updatedUser) {
+      console.error('Profile update error:', error);
+      res.status(500).json({ success: false, error: 'Failed to update profile' });
+      return;
+    }
+
+    // If email changed, update Supabase Auth email too
+    if (email) {
+      try {
+        const { error: authError } = await supabase.auth.admin.updateUserById(
+          userId,
+          { email: email.toLowerCase().trim() }
+        );
+        if (authError) {
+          console.warn('Failed to update Supabase Auth email:', authError);
+          // Don't fail the request - the database email is updated
+        }
+      } catch (authError) {
+        console.warn('Failed to update Supabase Auth email:', authError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: formatUserResponse(updatedUser as User),
+    });
+  } catch (error: any) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to update profile' });
+  }
+});
+
 export default router;

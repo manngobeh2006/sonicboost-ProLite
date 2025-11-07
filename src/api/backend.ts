@@ -162,6 +162,14 @@ class APIClient {
       body: JSON.stringify(params),
     });
   }
+
+  // Update user profile (name and/or email)
+  async updateProfile(updates: { name?: string; email?: string }) {
+    return await this.request('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
 }
 
 // Export singleton instance

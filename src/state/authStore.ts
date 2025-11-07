@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../api/supabase';
+import { apiClient } from '../api/backend';
 import { useAudioStore } from './audioStore';
 
 export interface User {
@@ -24,6 +25,7 @@ interface AuthState {
   resetPassword: (token: string, newPassword: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => void;
+  updateProfileWithBackend: (updates: { name?: string; email?: string }) => Promise<{ success: boolean; error?: string; message?: string }>;
   refreshUser: () => Promise<void>;
   simulateProUpgrade: () => void;
   initialize: () => void;
@@ -332,6 +334,71 @@ export const useAuthStore = create<AuthState>()(
         if (currentUser) {
           const updatedUser = { ...currentUser, ...updates };
           set({ user: updatedUser });
+        }
+      },
+
+      updateProfileWithBackend: async (updates: { name?: string; email?: string }) => {
+        try {
+          console.log('🚀 Updating profile with backend...');
+
+          if (!updates.name && !updates.email) {
+            return { success: false, error: 'At least one field (name or email) is required' };
+          }
+
+          // Validate email format if provided
+          if (updates.email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(updates.email)) {
+              return { success: false, error: 'Please enter a valid email address' };
+            }
+          }
+
+          // Call backend API to update profile
+          const response = await apiClient.updateProfile(updates);
+
+          if (response.success && response.user) {
+            // Update local state with new user data
+            const updatedUser: User = {
+              id: response.user.id,
+              email: response.user.email,
+              name: response.user.name,
+              subscriptionStatus: response.user.subscriptionStatus,
+              subscriptionTier: response.user.subscriptionTier,
+              subscriptionId: response.user.subscriptionId,
+              enhancementsThisMonth: response.user.enhancementsThisMonth,
+              createdAt: response.user.createdAt,
+            };
+            set({ user: updatedUser });
+
+            // Also update Supabase Auth user metadata if email changed
+            if (updates.email) {
+              try {
+                await supabase.auth.updateUser({ email: updates.email });
+              } catch (supabaseError) {
+                console.warn('Supabase Auth email update warning:', supabaseError);
+                // Don't fail - backend already updated
+              }
+            }
+
+            console.log('✅ Profile updated successfully');
+            return { success: true, message: response.message || 'Profile updated successfully' };
+          }
+
+          return { success: false, error: response.error || 'Failed to update profile' };
+        } catch (error: any) {
+          console.error('❌ Update profile error:', error);
+          
+          // Check if it's a backend connectivity error
+          if (error.message?.includes('Network request failed') ||
+              error.message?.includes('backend server may be offline') ||
+              error.message?.includes('timeout')) {
+            return { 
+              success: false, 
+              error: 'Cannot connect to server. Profile updates require backend connection.' 
+            };
+          }
+          
+          return { success: false, error: error.message || 'Failed to update profile' };
         }
       },
 

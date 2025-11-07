@@ -166,6 +166,38 @@ export default function ResultsScreen() {
     }
   };
 
+  const skipBackward = async () => {
+    if (!sound) return;
+    
+    try {
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded) {
+        const newPosition = Math.max(0, status.positionMillis - 10000); // 10 seconds back
+        await sound.setPositionAsync(newPosition);
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('Skip backward warning:', (error as Error)?.message);
+      }
+    }
+  };
+
+  const skipForward = async () => {
+    if (!sound) return;
+    
+    try {
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded && status.durationMillis) {
+        const newPosition = Math.min(status.durationMillis, status.positionMillis + 10000); // 10 seconds forward
+        await sound.setPositionAsync(newPosition);
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('Skip forward warning:', (error as Error)?.message);
+      }
+    }
+  };
+
   const switchVersion = async (version: AudioVersion) => {
     if (version === currentVersion) return;
 
@@ -478,8 +510,12 @@ export default function ResultsScreen() {
 
             {/* Controls */}
             <View className="flex-row items-center justify-center space-x-6">
-              <Pressable className="w-14 h-14 bg-gray-800 rounded-full items-center justify-center active:opacity-70">
-                <Ionicons name="play-skip-back" size={24} color="white" />
+              <Pressable 
+                onPress={skipBackward}
+                disabled={!sound || isLoading}
+                className="w-14 h-14 bg-gray-800 rounded-full items-center justify-center active:opacity-70"
+              >
+                <Ionicons name="play-back" size={24} color={sound && !isLoading ? "white" : "#4B5563"} />
               </Pressable>
 
               <Pressable
@@ -496,8 +532,12 @@ export default function ResultsScreen() {
                 )}
               </Pressable>
 
-              <Pressable className="w-14 h-14 bg-gray-800 rounded-full items-center justify-center active:opacity-70">
-                <Ionicons name="play-skip-forward" size={24} color="white" />
+              <Pressable 
+                onPress={skipForward}
+                disabled={!sound || isLoading}
+                className="w-14 h-14 bg-gray-800 rounded-full items-center justify-center active:opacity-70"
+              >
+                <Ionicons name="play-forward" size={24} color={sound && !isLoading ? "white" : "#4B5563"} />
             </Pressable>
           </View>
         </View>

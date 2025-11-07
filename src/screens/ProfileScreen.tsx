@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, Alert, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert, Linking, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,8 +12,12 @@ type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 
 export default function ProfileScreen() {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-  const { user, logout, refreshUser } = useAuthStore();
+  const { user, logout, refreshUser, updateProfileWithBackend } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Auto-refresh user data when screen comes into focus
   useFocusEffect(
@@ -22,6 +26,59 @@ export default function ProfileScreen() {
       refreshUser();
     }, [refreshUser])
   );
+
+  const handleEditProfile = () => {
+    setEditName(user?.name || '');
+    setEditEmail(user?.email || '');
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false);
+    setEditName('');
+    setEditEmail('');
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim() && !editEmail.trim()) {
+      Alert.alert('Error', 'Please enter at least one field');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updates: { name?: string; email?: string } = {};
+      
+      // Only include fields that changed
+      if (editName.trim() && editName !== user?.name) {
+        updates.name = editName.trim();
+      }
+      if (editEmail.trim() && editEmail !== user?.email) {
+        updates.email = editEmail.trim();
+      }
+
+      if (Object.keys(updates).length === 0) {
+        Alert.alert('No Changes', 'No changes were made to your profile');
+        setIsEditingProfile(false);
+        return;
+      }
+
+      const result = await updateProfileWithBackend(updates);
+      
+      if (result.success) {
+        Alert.alert('Success', result.message || 'Profile updated successfully');
+        setIsEditingProfile(false);
+        // Refresh to get latest data
+        await refreshUser();
+      } else {
+        Alert.alert('Error', result.error || 'Failed to update profile');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleManageSubscription = async () => {
     // Check if user has an active subscription
@@ -166,12 +223,65 @@ export default function ProfileScreen() {
                 {user?.name.charAt(0).toUpperCase()}
               </Text>
             </View>
-            <Text className="text-white text-xl font-bold">{user?.name}</Text>
-            <Text className="text-gray-400 text-sm mt-1">{user?.email}</Text>
+            {!isEditingProfile ? (
+              <>
+                <Text className="text-white text-xl font-bold">{user?.name}</Text>
+                <Text className="text-gray-400 text-sm mt-1">{user?.email}</Text>
+              </>
+            ) : (
+              <View className="w-full mt-2">
+                <Text className="text-gray-400 text-xs mb-2">Name</Text>
+                <TextInput
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Enter your name"
+                  placeholderTextColor="#6B7280"
+                  className="bg-gray-800 text-white px-4 py-3 rounded-xl mb-4 border border-gray-700"
+                />
+                <Text className="text-gray-400 text-xs mb-2">Email</Text>
+                <TextInput
+                  value={editEmail}
+                  onChangeText={setEditEmail}
+                  placeholder="Enter your email"
+                  placeholderTextColor="#6B7280"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  className="bg-gray-800 text-white px-4 py-3 rounded-xl border border-gray-700"
+                />
+                <View className="flex-row mt-4 space-x-3">
+                  <Pressable
+                    onPress={handleCancelEdit}
+                    disabled={isSaving}
+                    className="flex-1 bg-gray-800 py-3 rounded-xl active:opacity-70"
+                  >
+                    <Text className="text-gray-300 text-center font-semibold">Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={handleSaveProfile}
+                    disabled={isSaving}
+                    className="flex-1 bg-purple-600 py-3 rounded-xl active:opacity-70"
+                  >
+                    {isSaving ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Text className="text-white text-center font-semibold">Save</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </View>
+            )}
           </View>
 
-          {/* Subscription Badge */}
+          {/* Subscription Badge & Edit Button */}
           <View className="flex-row items-center justify-center">
+            {!isEditingProfile && (
+              <Pressable
+                onPress={handleEditProfile}
+                className="absolute left-0 bg-gray-800 px-3 py-2 rounded-full active:opacity-70"
+              >
+                <Ionicons name="pencil" size={16} color="#9CA3AF" />
+              </Pressable>
+            )}
             <View className={`${getSubscriptionBadgeColor()} px-4 py-2 rounded-full flex-row items-center`}>
               <Ionicons name="star" size={16} color="white" />
               <Text className="text-white text-sm font-semibold ml-2 uppercase">
