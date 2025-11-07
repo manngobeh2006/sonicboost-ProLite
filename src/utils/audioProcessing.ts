@@ -264,6 +264,13 @@ async function detectRealTempo(uri: string, duration: number, genre: AudioGenre)
       return 0;
     }
 
+    // Analyze filename for tempo hints FIRST (most reliable)
+    const tempoFromFilename = extractTempoFromFilename(uri);
+    if (tempoFromFilename > 0) {
+      console.log(`Found tempo hint in filename: ${tempoFromFilename} BPM`);
+      return tempoFromFilename;
+    }
+
     // Load audio to get detailed information
     const { sound } = await Audio.Sound.createAsync(
       { uri },
@@ -287,11 +294,8 @@ async function detectRealTempo(uri: string, duration: number, genre: AudioGenre)
     // Calculate bitrate estimate
     const bitrate = duration > 0 ? (fileSize * 8) / duration / 1000 : 0; // kbps
 
-    // Analyze audio characteristics to estimate tempo more accurately
-    // Higher bitrate often correlates with more complex music (higher tempo)
-    // Duration patterns can indicate tempo ranges
-
-    const [minTempo, maxTempo] = getGenreTempoRange(genre);
+    // Use WIDE range for unknown genres to not bias the detection
+    const [minTempo, maxTempo] = genre === 'unknown' ? [60, 180] : getGenreTempoRange(genre);
 
     // Use duration patterns to estimate tempo
     // Beat-based analysis: calculate potential BPM from duration patterns
@@ -311,14 +315,6 @@ async function detectRealTempo(uri: string, duration: number, genre: AudioGenre)
       if (barRemainder < 0.1 || barRemainder > 0.9) {
         potentialTempos.push(bpm);
       }
-    }
-
-    // Analyze filename for tempo hints
-    const tempoFromFilename = extractTempoFromFilename(uri);
-    if (tempoFromFilename > 0) {
-      console.log(`Found tempo hint in filename: ${tempoFromFilename} BPM`);
-      await sound.unloadAsync();
-      return tempoFromFilename;
     }
 
     // Sample analysis: Analyze multiple points in the audio
@@ -405,7 +401,7 @@ function getGenreTempoRange(genre: AudioGenre): [number, number] {
     acoustic: [70, 130],
     vocal: [60, 120],
     podcast: [0, 0],
-    unknown: [80, 140],
+    unknown: [60, 180], // WIDE range to not bias detection
   };
   return tempoRanges[genre];
 }
@@ -419,40 +415,67 @@ function calculateTempoFromCharacteristics(
   bitrate: number,
   potentialTempos: number[]
 ): number {
+  // For unknown genre, use mathematical analysis instead of genre bias
+  if (genre === 'unknown') {
+    // Use duration and structural analysis to find most likely tempo
+    if (potentialTempos.length > 0) {
+      // Filter to most common tempo ranges (pop/rock/electronic sweet spot)
+      const commonRangePotentials = potentialTempos.filter(t => t >= 90 && t <= 140);
+      
+      if (commonRangePotentials.length > 0) {
+        // Pick the middle value from common range
+        const sorted = commonRangePotentials.sort((a, b) => a - b);
+        const medianIndex = Math.floor(sorted.length / 2);
+        return Math.round(sorted[medianIndex]);
+      }
+      
+      // If no common range matches, use first potential tempo
+      return Math.round(potentialTempos[0]);
+    }
+    
+    // Pure mathematical fallback based on duration structure
+    // Most songs are 100-120 BPM range
+    const baseTempo = 110;
+    
+    // Adjust by duration: shorter = faster, longer = slower
+    if (duration < 120) {
+      return 120; // Short songs tend to be energetic
+    } else if (duration > 300) {
+      return 95; // Long songs tend to be slower
+    }
+    
+    return baseTempo;
+  }
+
+  // Known genre: use genre-specific logic
   const [minTempo, maxTempo] = getGenreTempoRange(genre);
 
   // Start with genre-based baseline
   let tempo = minTempo + (maxTempo - minTempo) * 0.55; // Favor mid-range
 
   // Duration-based adjustment
-  // Shorter songs (< 2 min) tend to be faster
-  // Longer songs (> 5 min) tend to be slower
   if (duration < 120) {
-    tempo += (maxTempo - minTempo) * 0.15; // Increase by 15%
+    tempo += (maxTempo - minTempo) * 0.15;
   } else if (duration > 300) {
-    tempo -= (maxTempo - minTempo) * 0.1; // Decrease by 10%
+    tempo -= (maxTempo - minTempo) * 0.1;
   }
 
-  // Bitrate-based adjustment (higher bitrate often = more complex/faster music)
+  // Bitrate-based adjustment
   if (bitrate > 256) {
     tempo += (maxTempo - minTempo) * 0.08;
   } else if (bitrate < 128 && bitrate > 0) {
     tempo -= (maxTempo - minTempo) * 0.05;
   }
 
-  // Use potential tempos if available (those that fit well with song structure)
+  // Use potential tempos if available
   if (potentialTempos.length > 0) {
-    // Find the closest potential tempo to our calculated tempo
     const closest = potentialTempos.reduce((prev, curr) => {
       return Math.abs(curr - tempo) < Math.abs(prev - tempo) ? curr : prev;
     });
     tempo = closest;
   }
 
-  // Round to nearest integer or half
-  tempo = Math.round(tempo * 2) / 2;
-
-  // Ensure within valid range
+  // Round to nearest integer
   return Math.max(minTempo, Math.min(maxTempo, Math.round(tempo)));
 }
 
