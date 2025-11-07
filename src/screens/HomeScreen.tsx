@@ -23,7 +23,7 @@ export default function HomeScreen() {
 
   // Check if there's a recent completed file to return to
   const lastCompletedFile = lastCompletedFileId ? files.find(f => f.id === lastCompletedFileId) : null;
-  const canReturnToResults = lastCompletedFile && lastCompletedFile.status === 'completed';
+  const canReturnToResults = files.length > 0 && lastCompletedFile && lastCompletedFile.status === 'completed';
 
   const handlePickAudioFile = async () => {
     try {

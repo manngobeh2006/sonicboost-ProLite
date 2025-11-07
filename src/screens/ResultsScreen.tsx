@@ -9,7 +9,6 @@ import * as Sharing from 'expo-sharing';
 import { useAuthStore } from '../state/authStore';
 import { apiClient } from '../api/backend';
 import { useAudioStore } from '../state/audioStore';
-import { useAudioPlaybackStore } from '../state/audioPlaybackStore';
 import { RootStackParamList } from '../navigation/types';
 import { createMasteredSound, createOriginalSound, getGenreDisplayName, AudioGenre, analyzeAudioFile, calculateIntelligentMastering, processAudioFile } from '../utils/audioProcessing';
 import { parseAudioCommand, applyAudioCommand } from '../utils/audioAI';
@@ -27,7 +26,6 @@ export default function ResultsScreen() {
 
   const { files } = useAudioStore();
   const file = files.find((f) => f.id === fileId);
-  const { setSound: setGlobalSound, stopAndClearAudio, setIsPlaying: setGlobalIsPlaying } = useAudioPlaybackStore();
 
   const [currentVersion, setCurrentVersion] = useState<AudioVersion>('mastered');
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -53,23 +51,15 @@ export default function ResultsScreen() {
       navigation.goBack();
     } else if (file.masteredUri) {
       // Pre-load mastered audio on screen open
-      console.log('📱 Results screen opened, loading audio:', file.masteredUri);
-      loadAudio(file.masteredUri, 'mastered').catch(err => {
-        console.error('❌ Failed to pre-load audio:', err);
-      });
-    } else {
-      console.warn('⚠️ No masteredUri found for file:', file.id);
+      loadAudio(file.masteredUri, 'mastered');
     }
   }, [file, navigation]);
 
   useEffect(() => {
     return () => {
-      // Clean up local sound when leaving screen
       if (sound) {
         sound.unloadAsync();
       }
-      // Also clear global state
-      stopAndClearAudio();
     };
   }, [sound]);
 
@@ -115,7 +105,6 @@ export default function ResultsScreen() {
       newSound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
 
       setSound(newSound);
-      setGlobalSound(newSound, fileId);
       const status = await newSound.getStatusAsync();
       if (status.isLoaded && status.durationMillis) {
         setDuration(status.durationMillis);
@@ -132,25 +121,21 @@ export default function ResultsScreen() {
     if (status.isLoaded) {
       setPosition(status.positionMillis);
       setIsPlaying(status.isPlaying);
-      setGlobalIsPlaying(status.isPlaying);
 
       if (status.didJustFinish) {
         setIsPlaying(false);
-        setGlobalIsPlaying(false);
         setPosition(0);
       }
     }
   };
 
   const togglePlayPause = async () => {
-    // If sound isn't loaded yet, load it first
     if (!sound) {
-      console.log('Sound not loaded, loading now...');
       const uri = currentVersion === 'original' ? file?.originalUri : file?.masteredUri;
       if (uri) {
         await loadAudio(uri, currentVersion);
-        // Sound will be ready after this, but don't auto-play
-        // Let user click again to play
+        // The sound is now loaded, we need to get it and play
+        return;
       }
       return;
     }
@@ -174,7 +159,6 @@ export default function ResultsScreen() {
       await sound.stopAsync();
       await sound.unloadAsync();
       setSound(null);
-      setGlobalSound(null, null);
     }
 
     setCurrentVersion(version);
