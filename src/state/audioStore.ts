@@ -99,6 +99,13 @@ export const useAudioStore = create<AudioState>()(
     {
       name: 'audio-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        files: state.files,
+        currentFile: state.currentFile,
+        lastCompletedFileId: state.lastCompletedFileId,
+        // Explicitly exclude hasProcessedInSession from persistence
+        // It should reset to false on every app start/logout
+      }),
     }
   )
 );

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../api/supabase';
+import { useAudioStore } from './audioStore';
 
 export interface User {
   id: string;
@@ -322,6 +323,8 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         await supabase.auth.signOut();
         set({ user: null, isAuthenticated: false });
+        // Reset session flag so button doesn't show after re-login
+        useAudioStore.getState().setHasProcessedInSession(false);
       },
 
       updateProfile: (updates: Partial<User>) => {
