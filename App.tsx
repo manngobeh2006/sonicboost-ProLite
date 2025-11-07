@@ -8,6 +8,7 @@ import { Audio } from "expo-av";
 import * as Linking from "expo-linking";
 
 import ErrorBoundary from "./src/components/ErrorBoundary";
+import MiniPlayer from "./src/components/MiniPlayer";
 
 import { useAuthStore } from "./src/state/authStore";
 import { RootStackParamList } from "./src/navigation/types";
@@ -82,19 +83,23 @@ export default function App() {
                 <Stack.Screen name="Login" component={LoginScreen} />
               </Stack.Navigator>
             ) : (
-              <Stack.Navigator
-                screenOptions={{
-                  headerShown: false,
-                  animation: "default",
-                }}
-              >
-                <Stack.Screen name="Home" component={HomeScreen} />
-                <Stack.Screen name="Mastering" component={MasteringScreen} />
-                <Stack.Screen name="Results" component={ResultsScreen} />
-                <Stack.Screen name="History" component={HistoryScreen} />
-                <Stack.Screen name="Profile" component={ProfileScreen} />
-                <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} />
-              </Stack.Navigator>
+              <>
+                <Stack.Navigator
+                  screenOptions={{
+                    headerShown: false,
+                    animation: "default",
+                  }}
+                >
+                  <Stack.Screen name="Home" component={HomeScreen} />
+                  <Stack.Screen name="Mastering" component={MasteringScreen} />
+                  <Stack.Screen name="Results" component={ResultsScreen} />
+                  <Stack.Screen name="History" component={HistoryScreen} />
+                  <Stack.Screen name="Profile" component={ProfileScreen} />
+                  <Stack.Screen name="Subscriptions" component={SubscriptionsScreen} />
+                </Stack.Navigator>
+                {/* Global mini-player - shows when audio is playing */}
+                <MiniPlayer />
+              </>
             )}
           </NavigationContainer>
         </SafeAreaProvider>
