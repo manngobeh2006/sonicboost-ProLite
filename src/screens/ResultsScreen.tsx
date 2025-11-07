@@ -454,7 +454,7 @@ export default function ResultsScreen() {
                   <View className="flex-row items-center justify-center">
                     <Ionicons name="musical-notes" size={16} color="#9333EA" />
                     <Text className="text-gray-300 text-sm ml-2">Tempo: </Text>
-                    <Text className="text-white text-sm font-semibold">{file.tempo} BPM</Text>
+                    <Text className="text-white text-sm font-semibold">~{file.tempo} BPM</Text>
                   </View>
                 </View>
               </View>
@@ -518,7 +518,7 @@ export default function ResultsScreen() {
                   {file?.tempo && file.tempo > 0 ? (
                     <View className="ml-4">
                       <Text className="text-purple-300 text-xs mb-1">Tempo</Text>
-                      <Text className="text-white text-base font-semibold">{file.tempo} BPM</Text>
+                      <Text className="text-white text-base font-semibold">~{file.tempo} BPM</Text>
                     </View>
                   ) : null}
                 </View>

@@ -374,16 +374,41 @@ async function detectRealTempo(uri: string, duration: number, genre: AudioGenre)
 }
 
 /**
- * Extract tempo from filename if present (e.g., "Song Name 128bpm.mp3")
+ * Extract tempo from filename if present
+ * Matches multiple common patterns used by producers/DJs
  */
 function extractTempoFromFilename(filename: string): number {
-  const bpmMatch = filename.match(/(\d{2,3})\s*bpm/i);
-  if (bpmMatch) {
-    const bpm = parseInt(bpmMatch[1], 10);
-    if (bpm >= 40 && bpm <= 200) {
-      return bpm;
-    }
+  const lower = filename.toLowerCase();
+  
+  // Pattern 1: "128bpm" or "128 bpm" (most common)
+  let match = lower.match(/(\d{2,3})\s*bpm/);
+  if (match) {
+    const bpm = parseInt(match[1], 10);
+    if (bpm >= 40 && bpm <= 200) return bpm;
   }
+  
+  // Pattern 2: "_128_" or "-128-" (producer format)
+  match = lower.match(/[_\-](\d{2,3})[_\-]/);
+  if (match) {
+    const bpm = parseInt(match[1], 10);
+    // Only accept if in valid BPM range and appears intentional (not year/version)
+    if (bpm >= 60 && bpm <= 200) return bpm;
+  }
+  
+  // Pattern 3: "[128]" or "(128)" (tag format)
+  match = lower.match(/[\[\(](\d{2,3})[\]\)]/);
+  if (match) {
+    const bpm = parseInt(match[1], 10);
+    if (bpm >= 60 && bpm <= 200) return bpm;
+  }
+  
+  // Pattern 4: "@128" (another common format)
+  match = lower.match(/@(\d{2,3})/);
+  if (match) {
+    const bpm = parseInt(match[1], 10);
+    if (bpm >= 60 && bpm <= 200) return bpm;
+  }
+  
   return 0;
 }
 
