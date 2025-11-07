@@ -95,39 +95,52 @@ export default function ProfileScreen() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await apiClient.createPortalSession();
-      
-      if (response.success && response.url) {
-        await Linking.openURL(response.url);
-      } else {
-        Alert.alert('Error', 'Could not open subscription management');
-      }
-    } catch (error: any) {
-      console.error('Portal error:', error);
+    // Show user instructions before opening portal
+    Alert.alert(
+      'Opening Subscription Management',
+      'You\'ll be redirected to a secure page to manage your subscription.\n\nWhen finished, simply close the browser tab and return to the app.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Continue', 
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const response = await apiClient.createPortalSession();
+              
+              if (response.success && response.url) {
+                await Linking.openURL(response.url);
+              } else {
+                Alert.alert('Error', 'Could not open subscription management');
+              }
+            } catch (error: any) {
+              console.error('Portal error:', error);
 
-      // Check if it's a backend error (not running or misconfigured)
-      if (error.message?.includes('Network request failed') ||
-          error.message?.includes('fetch') ||
-          error.message?.includes('Backend returned non-JSON') ||
-          error.message?.includes('backend server may be offline') ||
-          error.message?.includes('Cannot connect to backend')) {
-        Alert.alert(
-          'Backend Offline',
-          'The backend server is not running. Subscription management requires a live backend connection.\n\n' +
-          'For testing: The app works without the backend, but subscription features need the server running.\n\n' +
-          'To start the backend:\n' +
-          '1. Configure backend/.env with your database and Stripe keys\n' +
-          '2. Run: cd backend && npm install && npm start',
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert('Error', error.message || 'Failed to open subscription portal');
-      }
-    } finally {
-      setLoading(false);
-    }
+              // Check if it's a backend error (not running or misconfigured)
+              if (error.message?.includes('Network request failed') ||
+                  error.message?.includes('fetch') ||
+                  error.message?.includes('Backend returned non-JSON') ||
+                  error.message?.includes('backend server may be offline') ||
+                  error.message?.includes('Cannot connect to backend')) {
+                Alert.alert(
+                  'Backend Offline',
+                  'The backend server is not running. Subscription management requires a live backend connection.\n\n' +
+                  'For testing: The app works without the backend, but subscription features need the server running.\n\n' +
+                  'To start the backend:\n' +
+                  '1. Configure backend/.env with your database and Stripe keys\n' +
+                  '2. Run: cd backend && npm install && npm start',
+                  [{ text: 'OK' }]
+                );
+              } else {
+                Alert.alert('Error', error.message || 'Failed to open subscription portal');
+              }
+            } finally {
+              setLoading(false);
+            }
+          }
+        },
+      ]
+    );
   };
 
   const handleLogout = async () => {
@@ -293,18 +306,20 @@ export default function ProfileScreen() {
 
         {/* Subscription Info */}
         <View className="mx-6 mb-6">
-          <Text className="text-white text-lg font-semibold mb-4">Subscription</Text>
+          <Text className="text-white text-lg font-semibold mb-4">Account Details</Text>
           <View className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
             <View className="flex-row justify-between items-center p-4 border-b border-gray-800">
-              <Text className="text-gray-400 text-sm">Stripe ID</Text>
-              <Text className="text-white text-sm font-mono">
-                {user?.subscriptionId}
+              <Text className="text-gray-400 text-sm">Plan</Text>
+              <Text className="text-white text-sm font-semibold">
+                {user?.subscriptionTier === 'pro' ? 'Pro Plan' : user?.subscriptionTier === 'unlimited' ? 'Unlimited Plan' : 'Free Plan'}
               </Text>
             </View>
             <View className="flex-row justify-between items-center p-4 border-b border-gray-800">
               <Text className="text-gray-400 text-sm">Status</Text>
-              <View className="bg-green-500/20 px-3 py-1 rounded-full">
-                <Text className="text-green-400 text-xs font-semibold">Active</Text>
+              <View className={`px-3 py-1 rounded-full ${user?.subscriptionStatus === 'active' ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
+                <Text className={`text-xs font-semibold ${user?.subscriptionStatus === 'active' ? 'text-green-400' : 'text-gray-400'}`}>
+                  {user?.subscriptionStatus === 'active' ? 'Active' : 'Inactive'}
+                </Text>
               </View>
             </View>
             <View className="flex-row justify-between items-center p-4">

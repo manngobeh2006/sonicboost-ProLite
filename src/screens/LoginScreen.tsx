@@ -68,12 +68,16 @@ export default function LoginScreen() {
         if (!result.success && result.shouldRedirectToLogin) {
           setIsLogin(true);
           setError('An account with this email already exists. Please login instead.');
+          setLoading(false);
           return;
         }
       }
 
       if (!result.success && result.error) {
         setError(result.error);
+      } else if (result.success) {
+        // Clear error on successful login/signup
+        setError('');
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -85,6 +89,9 @@ export default function LoginScreen() {
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setError('');
+    setEmail('');
+    setPassword('');
+    setName('');
     setShowForgotPassword(false);
     setForgotPasswordMessage('');
   };
