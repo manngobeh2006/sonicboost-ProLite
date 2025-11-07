@@ -345,7 +345,18 @@ export default function ResultsScreen() {
       // Parse user's natural language command
       const cmd = await parseAudioCommand(revisionCommand);
       if (cmd.type === 'unknown') {
-        Alert.alert('Not understood', cmd.description);
+        // Check if it's a rate limit error
+        if (cmd.description?.includes('rate limit') || cmd.description?.includes('Rate limit')) {
+          Alert.alert(
+            'AI Temporarily Unavailable',
+            'The AI revision feature is currently at capacity. You can still manually adjust your audio:\n\n' +
+            '• Re-upload and process with different settings\n' +
+            '• Try again in a few minutes\n\n' +
+            'The audio you have now is fully enhanced and ready to download!'
+          );
+        } else {
+          Alert.alert('Not understood', cmd.description);
+        }
         setIsRunningRevision(false);
         return;
       }
@@ -388,7 +399,20 @@ export default function ResultsScreen() {
       if (__DEV__) {
         console.warn('Revision warning:', e?.message);
       }
-      Alert.alert('Revision failed', e?.message || 'Could not apply revision. Please try again.');
+      
+      // Check if it's a rate limit error
+      const errorMsg = e?.message || '';
+      if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
+        Alert.alert(
+          'AI Temporarily Unavailable',
+          'The AI revision feature is currently at capacity. You can still manually adjust your audio:\n\n' +
+          '• Re-upload and process with different settings\n' +
+          '• Try again in a few minutes\n\n' +
+          'The audio you have now is fully enhanced and ready to download!'
+        );
+      } else {
+        Alert.alert('Revision failed', errorMsg || 'Could not apply revision. Please try again.');
+      }
     } finally {
       setIsRunningRevision(false);
     }
