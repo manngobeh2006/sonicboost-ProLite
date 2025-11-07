@@ -116,11 +116,6 @@ export default function ResultsScreen() {
         setDuration(status.durationMillis);
       }
       setIsLoading(false);
-      
-      // Auto-play if user was trying to play
-      if (!isPlaying) {
-        console.log('Audio loaded successfully, ready to play');
-      }
     } catch (error) {
       console.error('Error loading audio:', error);
       Alert.alert('Error', 'Failed to load audio. Please try again.');
@@ -143,33 +138,9 @@ export default function ResultsScreen() {
   };
 
   const togglePlayPause = async () => {
-    // Don't allow playback while loading
-    if (isLoading) {
-      console.log('Audio is still loading, please wait...');
-      return;
-    }
-
-    if (!sound) {
-      const uri = currentVersion === 'original' ? file?.originalUri : file?.masteredUri;
-      if (uri) {
-        await loadAudio(uri, currentVersion);
-        // After loading, play automatically
-        return;
-      }
-      return;
-    }
+    if (!sound) return;
 
     try {
-      const status = await sound.getStatusAsync();
-      if (!status.isLoaded) {
-        console.log('Sound not loaded yet, reloading...');
-        const uri = currentVersion === 'original' ? file?.originalUri : file?.masteredUri;
-        if (uri) {
-          await loadAudio(uri, currentVersion);
-        }
-        return;
-      }
-
       if (isPlaying) {
         await sound.pauseAsync();
       } else {
@@ -177,12 +148,6 @@ export default function ResultsScreen() {
       }
     } catch (error) {
       console.error('Error toggling playback:', error);
-      // Try to reload audio on error
-      const uri = currentVersion === 'original' ? file?.originalUri : file?.masteredUri;
-      if (uri) {
-        setSound(null);
-        await loadAudio(uri, currentVersion);
-      }
     }
   };
 
