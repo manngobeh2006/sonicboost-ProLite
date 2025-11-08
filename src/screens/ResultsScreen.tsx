@@ -83,8 +83,9 @@ export default function ResultsScreen() {
       let newSound: Audio.Sound;
       try {
         if (version === 'mastered') {
-          // Use stored mastering settings from the file
-          const settings = file?.masteringSettings || {
+          // CRITICAL: Get fresh file from store to ensure latest settings after revision
+          const currentFile = useAudioStore.getState().files.find(f => f.id === fileId);
+          const settings = currentFile?.masteringSettings || file?.masteringSettings || {
             volumeBoost: 0.8,
             brightness: 0.7,
             midRange: 0.7,
