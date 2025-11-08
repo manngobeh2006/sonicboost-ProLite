@@ -17,9 +17,11 @@ export default function HistoryScreen() {
 
   const userFiles = user ? getFilesByUserId(user.id) : [];
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
+  const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
+  const hasPremium = isPro || isUnlimited; // Any paid plan
 
   // Check if user is on free plan and show upgrade screen
-  if (!isPro) {
+  if (!hasPremium) {
     return (
       <SafeAreaView className="flex-1 bg-black">
         <View className="px-6 py-6 flex-row items-center">
