@@ -14,6 +14,7 @@ export default function HistoryScreen() {
   const navigation = useNavigation<HistoryScreenNavigationProp>();
   const { user } = useAuthStore();
   const { getFilesByUserId, deleteFile } = useAudioStore();
+  const { stopAndClearAudio, currentFileId } = useAudioPlaybackStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const userFiles = user ? getFilesByUserId(user.id) : [];
@@ -113,7 +114,7 @@ export default function HistoryScreen() {
     }
   };
 
-  const handleDelete = useCallback((fileId: string, fileName: string) => {
+  const handleDelete = useCallback(async (fileId: string, fileName: string) => {
     Alert.alert(
       'Delete File',
       `Are you sure you want to delete "${fileName}"?`,
@@ -122,15 +123,25 @@ export default function HistoryScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            // Stop audio if this file is currently playing
+            if (currentFileId === fileId) {
+              await stopAndClearAudio();
+            }
+            
+            // Delete the file from store
             deleteFile(fileId);
+            
             // Force re-render to show updated list
             setRefreshKey(prev => prev + 1);
+            
+            // Show success message
+            Alert.alert('File Deleted', `"${fileName}" has been removed from your history.`);
           },
         },
       ]
     );
-  }, [deleteFile]);
+  }, [deleteFile, currentFileId, stopAndClearAudio]);
 
   const getStatusColor = (status: AudioFile['status']) => {
     switch (status) {
