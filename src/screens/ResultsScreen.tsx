@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useAuthStore } from '../state/authStore';
 import { apiClient } from '../api/backend';
 import { useAudioStore } from '../state/audioStore';
@@ -268,11 +269,32 @@ export default function ResultsScreen() {
         return;
       }
 
-      await Sharing.shareAsync(uri, {
+      // Create clean filename for user: remove extension and add _enhanced
+      const cleanName = file.originalFileName.replace(/\.[^/.]+$/, ''); // Remove extension
+      const userFriendlyFilename = `${cleanName}_enhanced.${format}`;
+      
+      // Copy file to temp directory with clean name for better user experience
+      const tempDir = `${FileSystem.documentDirectory}temp_downloads/`;
+      await FileSystem.makeDirectoryAsync(tempDir, { intermediates: true });
+      const cleanUri = `${tempDir}${userFriendlyFilename}`;
+      
+      await FileSystem.copyAsync({
+        from: uri,
+        to: cleanUri,
+      });
+
+      await Sharing.shareAsync(cleanUri, {
         mimeType: format === 'mp3' ? 'audio/mpeg' : 'audio/wav',
         dialogTitle: `Download Enhanced Audio (${format.toUpperCase()})`,
         UTI: format === 'mp3' ? 'public.mp3' : 'public.wav',
       });
+      
+      // Clean up cache file after sharing
+      try {
+        await FileSystem.deleteAsync(cleanUri, { idempotent: true });
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
     } catch (error) {
       if (__DEV__) {
         console.warn('Share error:', (error as Error)?.message);
