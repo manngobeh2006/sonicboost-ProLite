@@ -28,10 +28,16 @@
       "edgeToEdgeEnabled": true,
       "usesCleartextTraffic": true,
       "package": "com.sonicboost.prolite",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#000000"
+      },
       "permissions": [
         "RECORD_AUDIO",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET"
       ]
     },
     "plugins": [
