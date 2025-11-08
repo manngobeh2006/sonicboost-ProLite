@@ -26,7 +26,6 @@
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "usesCleartextTraffic": true,
       "package": "com.sonicboost.prolite",
       "versionCode": 1,
       "adaptiveIcon": {
@@ -47,7 +46,10 @@
           "organization": "personal-kte",
           "project": "react-native"
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-video",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
