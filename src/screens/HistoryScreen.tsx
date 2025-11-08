@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable, FlatList } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, Pressable, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,7 @@ export default function HistoryScreen() {
   const navigation = useNavigation<HistoryScreenNavigationProp>();
   const { user } = useAuthStore();
   const { getFilesByUserId, deleteFile } = useAudioStore();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const userFiles = user ? getFilesByUserId(user.id) : [];
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
@@ -112,9 +113,24 @@ export default function HistoryScreen() {
     }
   };
 
-  const handleDelete = (fileId: string) => {
-    deleteFile(fileId);
-  };
+  const handleDelete = useCallback((fileId: string, fileName: string) => {
+    Alert.alert(
+      'Delete File',
+      `Are you sure you want to delete "${fileName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteFile(fileId);
+            // Force re-render to show updated list
+            setRefreshKey(prev => prev + 1);
+          },
+        },
+      ]
+    );
+  }, [deleteFile]);
 
   const getStatusColor = (status: AudioFile['status']) => {
     switch (status) {
@@ -178,7 +194,7 @@ export default function HistoryScreen() {
                 <Pressable
                   onPress={(e) => {
                     e.stopPropagation();
-                    handleDelete(item.id);
+                    handleDelete(item.id, item.originalFileName);
                   }}
                   className="w-8 h-8 items-center justify-center"
                 >
@@ -231,6 +247,7 @@ export default function HistoryScreen() {
           data={userFiles}
           renderItem={renderFileItem}
           keyExtractor={(item) => item.id}
+          extraData={refreshKey}
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
         />
