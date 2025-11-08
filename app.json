@@ -48,6 +48,11 @@
           "project": "react-native"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e42a31e6-2b39-444e-8867-7bdf84e1e437"
+      }
+    }
   }
 }
