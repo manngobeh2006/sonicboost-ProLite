@@ -404,11 +404,17 @@ export default function ResultsScreen() {
         revisionUsed: updatedRevisionsCount > 0 
       });
 
+      // Give a moment for file system to flush the reprocessed audio
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get fresh file reference after update
+      const updatedFile = useAudioStore.getState().files.find(f => f.id === file.id);
+      
       // Reload the audio player with updated file
-      if (file.masteredUri) {
-        await loadAudio(file.masteredUri, 'mastered');
-      }
       setCurrentVersion('mastered');
+      if (updatedFile?.masteredUri) {
+        await loadAudio(updatedFile.masteredUri, 'mastered');
+      }
 
       setShowRevisionModal(false);
       
