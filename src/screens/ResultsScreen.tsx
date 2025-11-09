@@ -50,7 +50,7 @@ export default function ResultsScreen() {
 
   useEffect(() => {
     if (!file) {
-      Alert.alert('Error', 'File not found');
+      // File was deleted or doesn't exist - silently navigate back without error
       navigation.goBack();
     } else if (file.masteredUri) {
       // Pre-load mastered audio on screen open

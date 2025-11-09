@@ -135,9 +135,6 @@ export default function HistoryScreen() {
             
             // Force re-render to show updated list
             setRefreshKey(prev => prev + 1);
-            
-            // Show success message
-            Alert.alert('File Deleted', `"${fileName}" has been removed from your history.`);
           },
         },
       ]
