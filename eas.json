@@ -12,6 +12,12 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ceqcxgquubemnsueqsrv.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlcWN4Z3F1dWJlbW5zdWVxc3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1OTcxNjEsImV4cCI6MjA3NzE3MzE2MX0.Ig6nUNWuygAzCFXsOkndvLMYeRoZdohRVLw8l3eTzu8",
+        "EXPO_PUBLIC_VIBECODE_BACKEND_URL": "https://sonicboost-backend.onrender.com/api",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://3968f4e80c7e4506298a52d7bf89236d@o4510288259055616.ingest.us.sentry.io/4510288277405696"
+      },
       "android": {
         "buildType": "apk"
       }
