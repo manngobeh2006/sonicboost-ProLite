@@ -164,7 +164,7 @@ export default function ProfileScreen() {
     Alert.alert(
       'Help & Support',
       'Need assistance?\n\n' +
-      '📧 Email: support@sonicboost.app\n' +
+      '📧 Email: manngobeh2006@gmail.com\n' +
       '📱 Support Hours: 9 AM - 5 PM EST\n\n' +
       'Common Questions:\n' +
       '• How do I download my enhanced audio?\n' +
@@ -174,7 +174,7 @@ export default function ProfileScreen() {
       '• Audio quality issues?\n' +
       '  → Ensure your source file is high quality (WAV or high-bitrate MP3)',
       [
-        { text: 'Email Support', onPress: () => Linking.openURL('mailto:support@sonicboost.app') },
+        { text: 'Email Support', onPress: () => Linking.openURL('mailto:manngobeh2006@gmail.com') },
         { text: 'Close', style: 'cancel' },
       ]
     );

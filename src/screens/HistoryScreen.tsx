@@ -14,11 +14,12 @@ type HistoryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 export default function HistoryScreen() {
   const navigation = useNavigation<HistoryScreenNavigationProp>();
   const { user } = useAuthStore();
-  const { getFilesByUserId, deleteFile } = useAudioStore();
+  const { getFilesByUserId, deleteFile, files } = useAudioStore();
   const { stopAndClearAudio, currentFileId } = useAudioPlaybackStore();
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const userFiles = user ? getFilesByUserId(user.id) : [];
+  // Re-compute userFiles on every render to reflect deletions immediately
+  const userFiles = user ? files.filter(f => f.userId === user.id) : [];
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
   const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
   const hasPremium = isPro || isUnlimited; // Any paid plan
