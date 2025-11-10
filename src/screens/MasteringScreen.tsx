@@ -193,12 +193,33 @@ export default function MasteringScreen() {
     }
   };
 
+  const analyzeInBackground = async () => {
+    // Silently analyze audio without showing review UI
+    if (!file) return null;
+    if (audioAnalysis) return audioAnalysis;
+    
+    try {
+      const audioAnalysisResult = await analyzeAudioFile(file.originalUri, file.originalFileName);
+      setAudioAnalysis(audioAnalysisResult);
+      return audioAnalysisResult;
+    } catch (error) {
+      console.error('Background analysis error:', error);
+      return null;
+    }
+  };
+
   const simulateSonicBoostProcessing = async () => {
     if (!file) return;
-    if (!audioAnalysis) {
-      // Should not happen, but safety check
-      await startMixReview();
-      return;
+    
+    // Ensure we have audio analysis
+    let analysisToUse = audioAnalysis;
+    if (!analysisToUse) {
+      // Analyze in background first
+      analysisToUse = await analyzeInBackground();
+      if (!analysisToUse) {
+        Alert.alert('Error', 'Could not analyze audio. Please try again.');
+        return;
+      }
     }
 
     // Stop any currently playing audio preview
@@ -216,11 +237,11 @@ export default function MasteringScreen() {
       }
 
       // Load AI insights in background (non-blocking)
-      loadAIInsights(audioAnalysis);
+      loadAIInsights(analysisToUse);
 
       // Calculate mastering settings
       let masteringSettings;
-      let stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysis.genre)}...`;
+      let stageMessage = `Optimizing for ${getGenreDisplayName(analysisToUse.genre)}...`;
 
       if (customMasteringSettings) {
         // Use custom settings from AI commands
@@ -234,22 +255,22 @@ export default function MasteringScreen() {
           const referenceAnalysis = await analyzeReferenceTrack(referenceTrack.uri);
 
           // Calculate reference-based mastering settings
-          masteringSettings = calculateReferenceBasedMastering(audioAnalysis, referenceAnalysis);
+          masteringSettings = calculateReferenceBasedMastering(analysisToUse, referenceAnalysis);
           stageMessage = 'Matching reference sonic profile...';
 
           console.log('Using reference-based mastering');
         } catch (refError) {
           console.error('Reference track analysis failed, falling back to genre-based mastering:', refError);
           // Fall back to genre-based mastering if reference analysis fails
-          masteringSettings = calculateIntelligentMastering(audioAnalysis);
-          stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysis.genre)}...`;
+          masteringSettings = calculateIntelligentMastering(analysisToUse);
+          stageMessage = `Optimizing for ${getGenreDisplayName(analysisToUse.genre)}...`;
         }
       } else {
         // Genre-based intelligent mastering
-        masteringSettings = calculateIntelligentMastering(audioAnalysis);
+        masteringSettings = calculateIntelligentMastering(analysisToUse);
       }
 
-      console.log('Detected genre:', audioAnalysis.genre, 'Tempo:', audioAnalysis.tempo);
+      console.log('Detected genre:', analysisToUse.genre, 'Tempo:', analysisToUse.tempo);
 
       // Stage 2: Processing tone and frequency
       setCurrentStage(stageMessage);
@@ -297,8 +318,8 @@ export default function MasteringScreen() {
         masteredMp3Uri: mp3Uri,
         masteredWavUri: wavUri,
         completedAt: new Date().toISOString(),
-        genre: audioAnalysis.genre,
-        tempo: audioAnalysis.tempo,
+        genre: analysisToUse.genre,
+        tempo: analysisToUse.tempo,
         masteringSettings: masteringSettings,
       });
 
@@ -604,15 +625,28 @@ export default function MasteringScreen() {
           </View>
         )}
 
-        {/* Initial Review Button (before review is shown) */}
+        {/* Initial Buttons (before review is shown) */}
         {!mixReview && !processing && file.status === 'uploaded' && (
           <View className="mx-6 mb-8">
+            {/* Primary Action: Start Enhancement */}
+            <Pressable
+              onPress={simulateSonicBoostProcessing}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl py-5 items-center active:opacity-80 mb-4"
+            >
+              <Text className="text-white text-lg font-bold">Start Sonic Enhancement</Text>
+              <Text className="text-purple-100 text-xs mt-1">Apply AI-powered processing now</Text>
+            </Pressable>
+
+            {/* Secondary Action: Review First (Optional) */}
             <Pressable
               onPress={startMixReview}
-              className="bg-purple-600 rounded-3xl py-5 items-center active:opacity-80"
+              className="bg-gray-800/50 border-2 border-purple-600/50 rounded-3xl py-4 items-center active:opacity-80"
             >
-              <Text className="text-white text-lg font-bold">Review My Mix</Text>
-              <Text className="text-purple-200 text-xs mt-1">Get AI analysis and recommendations</Text>
+              <View className="flex-row items-center">
+                <Ionicons name="analytics" size={20} color="#9333EA" />
+                <Text className="text-purple-400 text-base font-semibold ml-2">Review My Mix First</Text>
+              </View>
+              <Text className="text-gray-400 text-xs mt-1">Optional: See detailed analysis before processing</Text>
             </Pressable>
           </View>
         )}
