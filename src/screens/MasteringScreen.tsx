@@ -53,6 +53,15 @@ export default function MasteringScreen() {
     }
   }, [file, navigation]);
 
+  // Reset review state when file changes (new upload)
+  useEffect(() => {
+    if (file && file.status === 'uploaded') {
+      setMixReview(null);
+      setShowingReview(false);
+      setAudioAnalysis(null);
+    }
+  }, [fileId]);
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'Unknown';
     const mb = bytes / (1024 * 1024);
