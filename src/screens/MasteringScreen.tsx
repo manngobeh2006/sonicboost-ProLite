@@ -534,16 +534,85 @@ export default function MasteringScreen() {
           </View>
         )}
 
-        {/* AI Assistant removed from initial processing. Now available as post-processing revision in Results screen. */}
+        {/* Mix Review Section */}
+        {mixReview && !processing && file.status === 'uploaded' && (
+          <View className="mx-6 mb-6">
+            {/* Review Score Card */}
+            <View className="bg-gradient-to-br from-purple-600/20 to-blue-600/20 rounded-3xl p-6 border border-purple-600/30 mb-4">
+              <View className="items-center mb-6">
+                <View className="w-24 h-24 rounded-full bg-purple-600/30 items-center justify-center mb-4">
+                  <Text className={`text-4xl font-bold ${getScoreColor(mixReview.overallScore)}`}>
+                    {getScoreGrade(mixReview.overallScore)}
+                  </Text>
+                </View>
+                <Text className={`text-2xl font-bold mb-2 ${getScoreColor(mixReview.overallScore)}`}>
+                  {getScoreDescription(mixReview.overallScore)}
+                </Text>
+                <Text className="text-gray-300 text-sm text-center leading-6">
+                  {mixReview.encouragement}
+                </Text>
+              </View>
 
-        {/* Start Button */}
-        {file.status === 'uploaded' && !processing && (
-          <View className="mx-6 mb-8">
+              {/* Strengths */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                  <Text className="text-white text-base font-semibold ml-2">What's Working Well</Text>
+                </View>
+                {mixReview.strengths.map((strength, index) => (
+                  <View key={index} className="flex-row items-start mb-2">
+                    <View className="w-2 h-2 bg-green-400 rounded-full mt-2 mr-3" />
+                    <Text className="text-gray-300 text-sm flex-1 leading-6">{strength}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Enhancement Opportunities */}
+              <View className="mb-6">
+                <View className="flex-row items-center mb-3">
+                  <Ionicons name="trending-up" size={20} color="#9333EA" />
+                  <Text className="text-white text-base font-semibold ml-2">Enhancement Opportunities</Text>
+                </View>
+                {mixReview.opportunities.map((opportunity, index) => (
+                  <View key={index} className="flex-row items-start mb-2">
+                    <View className="w-2 h-2 bg-purple-400 rounded-full mt-2 mr-3" />
+                    <Text className="text-gray-300 text-sm flex-1 leading-6">{opportunity}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Recommendations */}
+              <View className="bg-purple-600/20 rounded-2xl p-4">
+                <Text className="text-purple-300 text-xs font-semibold mb-2">Recommended Enhancements</Text>
+                {mixReview.recommendations.map((rec, index) => (
+                  <View key={index} className="flex-row items-start mb-1">
+                    <Ionicons name="flash" size={14} color="#A78BFA" />
+                    <Text className="text-purple-200 text-xs ml-2 flex-1">{rec}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Apply Enhancements Button */}
             <Pressable
               onPress={simulateSonicBoostProcessing}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl py-5 items-center active:opacity-80"
+            >
+              <Text className="text-white text-lg font-bold">Apply AI Enhancements</Text>
+              <Text className="text-purple-100 text-xs mt-1">Optimize your mix automatically</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Initial Review Button (before review is shown) */}
+        {!mixReview && !processing && file.status === 'uploaded' && (
+          <View className="mx-6 mb-8">
+            <Pressable
+              onPress={startMixReview}
               className="bg-purple-600 rounded-3xl py-5 items-center active:opacity-80"
             >
-              <Text className="text-white text-lg font-bold">Boost Audio</Text>
+              <Text className="text-white text-lg font-bold">Review My Mix</Text>
+              <Text className="text-purple-200 text-xs mt-1">Get AI analysis and recommendations</Text>
             </Pressable>
           </View>
         )}

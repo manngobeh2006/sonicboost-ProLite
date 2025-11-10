@@ -234,6 +234,56 @@ export default function ResultsScreen() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const handleShareToSocial = async () => {
+    if (!file) return;
+
+    const uri = file.masteredMp3Uri;
+    if (!uri) {
+      Alert.alert('Error', 'Enhanced audio not found');
+      return;
+    }
+
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Error', 'Sharing is not available on this device');
+        return;
+      }
+
+      // Create clean filename
+      const cleanName = file.originalFileName.replace(/\.[^/.]+$/, '');
+      const userFriendlyFilename = `${cleanName}_enhanced.mp3`;
+      
+      // Copy to temp directory
+      const tempDir = `${FileSystem.documentDirectory}temp_social/`;
+      await FileSystem.makeDirectoryAsync(tempDir, { intermediates: true });
+      const cleanUri = `${tempDir}${userFriendlyFilename}`;
+      
+      await FileSystem.copyAsync({
+        from: uri,
+        to: cleanUri,
+      });
+
+      // Share with native dialog (user can choose TikTok, Instagram, etc)
+      await Sharing.shareAsync(cleanUri, {
+        mimeType: 'audio/mpeg',
+        dialogTitle: 'Share Enhanced Audio',
+      });
+      
+      // Clean up
+      try {
+        await FileSystem.deleteAsync(cleanUri, { idempotent: true });
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('Share error:', (error as Error)?.message);
+      }
+      Alert.alert('Error', 'Failed to share file');
+    }
+  };
+
   const handleDownload = async (format: 'mp3' | 'wav') => {
     if (!file) return;
 
@@ -703,6 +753,25 @@ export default function ResultsScreen() {
           </View>
         )}
 
+        {/* Desktop Banner */}
+        {(user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'pro' || user?.subscriptionStatus === 'unlimited') && (
+          <View className="mx-6 mb-6">
+            <View className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-2 border-blue-500/50 rounded-2xl p-5">
+              <View className="flex-row items-center mb-3">
+                <Ionicons name="desktop" size={24} color="#3B82F6" />
+                <Text className="text-white text-lg font-bold ml-2">Desktop Version Coming Soon</Text>
+              </View>
+              <Text className="text-gray-300 text-sm mb-2">
+                OneClickMaster Desktop with professional DSP mastering engine - included FREE in your subscription
+              </Text>
+              <View className="flex-row items-center">
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text className="text-green-400 text-xs ml-1 font-semibold">Early access for Pro members</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Download Section */}
         <View className="mx-6 mb-6">
           <Text className="text-white text-lg font-semibold mb-3">Download Enhanced Audio</Text>
@@ -738,7 +807,25 @@ export default function ResultsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={20} color="#6B7280" />
             </Pressable>
+            
+            {/* Social Media Share */}
+            <Pressable
+              onPress={handleShareToSocial}
+              className="bg-gradient-to-r from-pink-600/20 to-purple-600/20 border-2 border-pink-500/50 rounded-2xl p-4 flex-row items-center justify-between active:opacity-70"
+            >
+              <View className="flex-row items-center">
+                <View className="w-12 h-12 bg-pink-600/30 rounded-xl items-center justify-center mr-4">
+                  <Ionicons name="share-social" size={24} color="#EC4899" />
+                </View>
+                <View>
+                  <Text className="text-white text-base font-semibold">Share to Social Media</Text>
+                  <Text className="text-gray-400 text-xs">TikTok, Instagram, YouTube & more</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#EC4899" />
+            </Pressable>
           </View>
+          
           {/* Restore Download authorization */}
           {!hasPremium && (
             <View className="mt-3">

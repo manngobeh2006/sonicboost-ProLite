@@ -129,6 +129,33 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* Desktop Early Access Banner - Pro Users */}
+        {(user?.subscriptionTier === 'pro' || user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'pro' || user?.subscriptionStatus === 'unlimited') && (
+          <View className="mx-6 mb-4">
+            <View className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-2 border-blue-500/50 rounded-2xl p-5">
+              <View className="flex-row items-start">
+                <View className="w-12 h-12 bg-blue-600 rounded-xl items-center justify-center mr-3">
+                  <Ionicons name="desktop" size={24} color="white" />
+                </View>
+                <View className="flex-1">
+                  <View className="flex-row items-center mb-1">
+                    <Text className="text-white text-base font-bold">Desktop Coming Soon</Text>
+                    <View className="bg-blue-600 px-2 py-0.5 rounded-full ml-2">
+                      <Text className="text-white text-xs font-bold">BETA</Text>
+                    </View>
+                  </View>
+                  <Text className="text-gray-300 text-sm mb-2">
+                    OneClickMaster Desktop with real DSP engine - included in your Pro subscription
+                  </Text>
+                  <Text className="text-blue-300 text-xs">
+                    ✨ Early access for current Pro members
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Upload Card */}
         <View className="mx-6 mb-8">
           <Pressable
