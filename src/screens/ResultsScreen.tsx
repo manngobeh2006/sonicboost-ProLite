@@ -473,7 +473,7 @@ export default function ResultsScreen() {
         <View className="mx-6 mb-6 bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex-row items-center">
           <Ionicons name="checkmark-circle" size={24} color="#10B981" />
           <Text className="text-green-400 text-sm font-semibold ml-3">
-            Your audio has been enhanced successfully!
+            Sonic enhancement complete! Ready for mastering.
           </Text>
         </View>
 
@@ -597,13 +597,16 @@ export default function ResultsScreen() {
                 className="w-14 h-14 bg-gray-800 rounded-full items-center justify-center active:opacity-70"
               >
                 <Ionicons name="play-forward" size={24} color={sound && !isLoading ? "white" : "#4B5563"} />
-            </Pressable>
+              </Pressable>
+            </View>
           </View>
         </View>
 
-        {/* Enhancement Info - Only show for enhanced version */}
-        {currentVersion === 'mastered' && (
-          <View className="mx-6 mb-6 bg-purple-600/10 border border-purple-600/30 rounded-2xl p-4">
+        {/* Sonic Analysis - Only show for enhanced version */}
+        {currentVersion === 'mastered' && file?.masteringSettings && (
+          <View className="mx-6 mb-6 bg-gray-900 rounded-2xl p-5 border border-gray-800">
+            <Text className="text-white text-lg font-semibold mb-4">Sonic Analysis</Text>
+            
             {/* Genre Detection */}
             {file?.genre && (
               <View className="bg-purple-600/20 rounded-xl p-3 mb-4">
@@ -623,42 +626,82 @@ export default function ResultsScreen() {
                 </View>
               </View>
             )}
-            
-            <View className="flex-row items-center mb-3">
-              <Ionicons name="flash" size={20} color="#9333EA" />
-              <Text className="text-purple-400 text-sm font-semibold ml-2">
-                Intelligent Enhancements Applied
-              </Text>
+
+            {/* Enhancement Meters */}
+            <View className="space-y-3">
+              {/* Loudness */}
+              <View className="mb-3">
+                <View className="flex-row justify-between mb-2">
+                  <Text className="text-gray-300 text-sm font-medium">Loudness Boost</Text>
+                  <Text className="text-purple-400 text-sm font-semibold">
+                    {Math.round(file.masteringSettings.volumeBoost * 100)}%
+                  </Text>
+                </View>
+                <View className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <View 
+                    className="h-full bg-gradient-to-r from-red-500 to-orange-400 rounded-full"
+                    style={{ width: `${file.masteringSettings.volumeBoost * 100}%` }}
+                  />
+                </View>
+              </View>
+
+              {/* Brightness */}
+              <View className="mb-3">
+                <View className="flex-row justify-between mb-2">
+                  <Text className="text-gray-300 text-sm font-medium">Brightness</Text>
+                  <Text className="text-cyan-400 text-sm font-semibold">
+                    {Math.round(file.masteringSettings.brightness * 100)}%
+                  </Text>
+                </View>
+                <View className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <View 
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full"
+                    style={{ width: `${file.masteringSettings.brightness * 100}%` }}
+                  />
+                </View>
+              </View>
+
+              {/* Vocal Clarity */}
+              <View className="mb-3">
+                <View className="flex-row justify-between mb-2">
+                  <Text className="text-gray-300 text-sm font-medium">Vocal Clarity</Text>
+                  <Text className="text-green-400 text-sm font-semibold">
+                    {Math.round(file.masteringSettings.midRange * 100)}%
+                  </Text>
+                </View>
+                <View className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <View 
+                    className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full"
+                    style={{ width: `${file.masteringSettings.midRange * 100}%` }}
+                  />
+                </View>
+              </View>
+
+              {/* Bass Enhancement */}
+              <View>
+                <View className="flex-row justify-between mb-2">
+                  <Text className="text-gray-300 text-sm font-medium">Bass Enhancement</Text>
+                  <Text className="text-purple-400 text-sm font-semibold">
+                    {Math.round(file.masteringSettings.bassBoost * 100)}%
+                  </Text>
+                </View>
+                <View className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <View 
+                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
+                    style={{ width: `${file.masteringSettings.bassBoost * 100}%` }}
+                  />
+                </View>
+              </View>
             </View>
-            <View className="space-y-2">
-              <View className="flex-row items-center">
-                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3" />
-                <Text className="text-gray-300 text-xs flex-1">
-                  Genre-optimized loudness maximization
-                </Text>
-              </View>
-              <View className="flex-row items-center">
-                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3" />
-                <Text className="text-gray-300 text-xs flex-1">
-                  Adaptive brightness enhancement
-                </Text>
-              </View>
-              <View className="flex-row items-center">
-                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3" />
-                <Text className="text-gray-300 text-xs flex-1">
-                  Mid-range preservation for vocal clarity
-                </Text>
-              </View>
-              <View className="flex-row items-center">
-                <View className="w-2 h-2 bg-purple-500 rounded-full mr-3" />
-                <Text className="text-gray-300 text-xs flex-1">
-                  Tempo-aware dynamic processing
-                </Text>
-              </View>
+
+            {/* Enhancement Summary */}
+            <View className="mt-4 pt-4 border-t border-gray-800">
+              <Text className="text-gray-400 text-xs text-center">
+                Genre-optimized sonic enhancement applied
+              </Text>
             </View>
           </View>
         )}
-        </View>
 
         {/* Download Section */}
         <View className="mx-6 mb-6">

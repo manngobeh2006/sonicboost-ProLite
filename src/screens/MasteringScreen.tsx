@@ -174,7 +174,7 @@ export default function MasteringScreen() {
 
     try {
       // Stage 1: Analyzing audio characteristics
-      setCurrentStage('Analyzing audio file...');
+      setCurrentStage('Analyzing sonic characteristics...');
       for (let i = 0; i <= 20; i++) {
         await new Promise((resolve) => setTimeout(resolve, 80));
         updateFile(file.id, { progress: i });
@@ -189,12 +189,12 @@ export default function MasteringScreen() {
 
       // Calculate mastering settings
       let masteringSettings;
-      let stageMessage = `Enhancing clarity for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
+      let stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
 
       if (customMasteringSettings) {
         // Use custom settings from AI commands
         masteringSettings = customMasteringSettings;
-        stageMessage = 'Applying your custom settings...';
+        stageMessage = 'Applying your custom enhancement...';
         console.log('Using custom AI-adjusted mastering settings');
       } else if (referenceTrack) {
         // Reference-based mastering with error handling
@@ -204,14 +204,14 @@ export default function MasteringScreen() {
 
           // Calculate reference-based mastering settings
           masteringSettings = calculateReferenceBasedMastering(audioAnalysisResult, referenceAnalysis);
-          stageMessage = 'Matching reference sound...';
+          stageMessage = 'Matching reference sonic profile...';
 
           console.log('Using reference-based mastering');
         } catch (refError) {
           console.error('Reference track analysis failed, falling back to genre-based mastering:', refError);
           // Fall back to genre-based mastering if reference analysis fails
           masteringSettings = calculateIntelligentMastering(audioAnalysisResult);
-          stageMessage = `Enhancing clarity for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
+          stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
         }
       } else {
         // Genre-based intelligent mastering
@@ -228,14 +228,14 @@ export default function MasteringScreen() {
       }
 
       // Stage 3: Adjusting dynamics and preserving vocals
-      setCurrentStage('Boosting loudness and dynamics...');
+      setCurrentStage('Enhancing frequency balance...');
       for (let i = 51; i <= 75; i++) {
         await new Promise((resolve) => setTimeout(resolve, 80));
         updateFile(file.id, { progress: i });
       }
 
       // Stage 4: Finalizing
-      setCurrentStage('Finalizing audio boost...');
+      setCurrentStage('Preparing for mastering...');
       for (let i = 76; i <= 90; i++) {
         await new Promise((resolve) => setTimeout(resolve, 80));
         updateFile(file.id, { progress: i });
@@ -253,7 +253,7 @@ export default function MasteringScreen() {
       await processAudioFile(file.originalUri, wavUri, masteringSettings);
 
       // Stage 5: Complete
-      setCurrentStage('Complete!');
+      setCurrentStage('Sonic enhancement complete!');
       for (let i = 91; i <= 100; i++) {
         await new Promise((resolve) => setTimeout(resolve, 50));
         updateFile(file.id, { progress: i });
