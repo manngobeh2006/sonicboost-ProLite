@@ -13,6 +13,7 @@ import { RootStackParamList } from '../navigation/types';
 import { processAudioFile, analyzeAudioFile, calculateIntelligentMastering, getGenreDisplayName, analyzeReferenceTrack, calculateReferenceBasedMastering, AudioAnalysis, MasteringSettings } from '../utils/audioProcessing';
 import { parseAudioCommand, applyAudioCommand, generateAudioAnalysisDescription, generateMixingTips, generatePreMasteringTips } from '../utils/audioAI';
 import { analyzeMixQuality, getScoreColor, getScoreGrade, getScoreDescription, MixReviewResult } from '../utils/mixReview';
+import { generateGPTMixReview } from '../utils/gptMixReview';
 
 type MasteringScreenRouteProp = RouteProp<RootStackParamList, 'Mastering'>;
 type MasteringScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Mastering'>;
@@ -188,10 +189,19 @@ export default function MasteringScreen() {
       const audioAnalysisResult = await analyzeAudioFile(file.originalUri, file.originalFileName);
       setAudioAnalysis(audioAnalysisResult);
 
-      // Generate encouraging review
-      const review = analyzeMixQuality(audioAnalysisResult);
+      setCurrentStage('Generating personalized review...');
+      
+      // Try GPT-powered review first, fallback to basic if it fails
+      let review: MixReviewResult;
+      try {
+        review = await generateGPTMixReview(audioAnalysisResult, file.originalFileName);
+        console.log('✅ GPT review generated successfully');
+      } catch (gptError) {
+        console.log('⚠️ GPT review failed, using fallback analysis');
+        review = analyzeMixQuality(audioAnalysisResult);
+      }
+      
       setMixReview(review);
-
       setProcessing(false);
       // Review is now shown, user can proceed to enhance
     } catch (error) {
@@ -649,13 +659,15 @@ export default function MasteringScreen() {
             {/* Secondary Action: Review First (Optional) */}
             <Pressable
               onPress={startMixReview}
-              className="bg-gray-800/50 border-2 border-purple-600/50 rounded-3xl py-4 items-center active:opacity-80"
+              className="bg-purple-900/30 border-2 border-purple-500 rounded-3xl py-5 items-center active:opacity-70 shadow-lg"
             >
-              <View className="flex-row items-center">
-                <Ionicons name="analytics" size={20} color="#9333EA" />
-                <Text className="text-purple-400 text-base font-semibold ml-2">Review My Mix First</Text>
+              <View className="flex-row items-center mb-1">
+                <View className="w-10 h-10 bg-purple-600 rounded-full items-center justify-center mr-3">
+                  <Ionicons name="analytics" size={22} color="#FFFFFF" />
+                </View>
+                <Text className="text-white text-lg font-bold">Review My Mix First</Text>
               </View>
-              <Text className="text-gray-400 text-xs mt-1">Optional: See detailed analysis before processing</Text>
+              <Text className="text-purple-300 text-xs mt-1">Optional: Get AI analysis before processing</Text>
             </Pressable>
           </View>
         )}
