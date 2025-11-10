@@ -12,6 +12,7 @@ import { useAudioPlaybackStore } from '../state/audioPlaybackStore';
 import { RootStackParamList } from '../navigation/types';
 import { processAudioFile, analyzeAudioFile, calculateIntelligentMastering, getGenreDisplayName, analyzeReferenceTrack, calculateReferenceBasedMastering, AudioAnalysis, MasteringSettings } from '../utils/audioProcessing';
 import { parseAudioCommand, applyAudioCommand, generateAudioAnalysisDescription, generateMixingTips, generatePreMasteringTips } from '../utils/audioAI';
+import { analyzeMixQuality, getScoreColor, getScoreGrade, getScoreDescription, MixReviewResult } from '../utils/mixReview';
 
 type MasteringScreenRouteProp = RouteProp<RootStackParamList, 'Mastering'>;
 type MasteringScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Mastering'>;
@@ -38,6 +39,8 @@ export default function MasteringScreen() {
   const [processingCommand, setProcessingCommand] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [loadingTips, setLoadingTips] = useState(false);
+  const [mixReview, setMixReview] = useState<MixReviewResult | null>(null);
+  const [showingReview, setShowingReview] = useState(false);
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
   const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
@@ -163,8 +166,40 @@ export default function MasteringScreen() {
     }
   };
 
+  const startMixReview = async () => {
+    if (!file) return;
+
+    setShowingReview(true);
+    setProcessing(true);
+    
+    try {
+      setCurrentStage('Analyzing your mix...');
+      
+      // Analyze audio
+      const audioAnalysisResult = await analyzeAudioFile(file.originalUri, file.originalFileName);
+      setAudioAnalysis(audioAnalysisResult);
+
+      // Generate encouraging review
+      const review = analyzeMixQuality(audioAnalysisResult);
+      setMixReview(review);
+
+      setProcessing(false);
+      // Review is now shown, user can proceed to enhance
+    } catch (error) {
+      console.error('Review error:', error);
+      Alert.alert('Analysis Error', 'Could not analyze your mix. Please try again.');
+      setProcessing(false);
+      setShowingReview(false);
+    }
+  };
+
   const simulateSonicBoostProcessing = async () => {
     if (!file) return;
+    if (!audioAnalysis) {
+      // Should not happen, but safety check
+      await startMixReview();
+      return;
+    }
 
     // Stop any currently playing audio preview
     await stopAndClearAudio();
@@ -173,23 +208,19 @@ export default function MasteringScreen() {
     updateFile(file.id, { status: 'processing', progress: 0 });
 
     try {
-      // Stage 1: Analyzing audio characteristics
-      setCurrentStage('Analyzing sonic characteristics...');
+      // Stage 1: Applying enhancements based on review
+      setCurrentStage('Applying recommended enhancements...');
       for (let i = 0; i <= 20; i++) {
         await new Promise((resolve) => setTimeout(resolve, 80));
         updateFile(file.id, { progress: i });
       }
 
-      // Analyze audio to detect genre, tempo, and characteristics
-      const audioAnalysisResult = await analyzeAudioFile(file.originalUri, file.originalFileName);
-      setAudioAnalysis(audioAnalysisResult);
-
       // Load AI insights in background (non-blocking)
-      loadAIInsights(audioAnalysisResult);
+      loadAIInsights(audioAnalysis);
 
       // Calculate mastering settings
       let masteringSettings;
-      let stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
+      let stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysis.genre)}...`;
 
       if (customMasteringSettings) {
         // Use custom settings from AI commands
@@ -203,22 +234,22 @@ export default function MasteringScreen() {
           const referenceAnalysis = await analyzeReferenceTrack(referenceTrack.uri);
 
           // Calculate reference-based mastering settings
-          masteringSettings = calculateReferenceBasedMastering(audioAnalysisResult, referenceAnalysis);
+          masteringSettings = calculateReferenceBasedMastering(audioAnalysis, referenceAnalysis);
           stageMessage = 'Matching reference sonic profile...';
 
           console.log('Using reference-based mastering');
         } catch (refError) {
           console.error('Reference track analysis failed, falling back to genre-based mastering:', refError);
           // Fall back to genre-based mastering if reference analysis fails
-          masteringSettings = calculateIntelligentMastering(audioAnalysisResult);
-          stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysisResult.genre)}...`;
+          masteringSettings = calculateIntelligentMastering(audioAnalysis);
+          stageMessage = `Optimizing for ${getGenreDisplayName(audioAnalysis.genre)}...`;
         }
       } else {
         // Genre-based intelligent mastering
-        masteringSettings = calculateIntelligentMastering(audioAnalysisResult);
+        masteringSettings = calculateIntelligentMastering(audioAnalysis);
       }
 
-      console.log('Detected genre:', audioAnalysisResult.genre, 'Tempo:', audioAnalysisResult.tempo);
+      console.log('Detected genre:', audioAnalysis.genre, 'Tempo:', audioAnalysis.tempo);
 
       // Stage 2: Processing tone and frequency
       setCurrentStage(stageMessage);
@@ -266,8 +297,8 @@ export default function MasteringScreen() {
         masteredMp3Uri: mp3Uri,
         masteredWavUri: wavUri,
         completedAt: new Date().toISOString(),
-        genre: audioAnalysisResult.genre,
-        tempo: audioAnalysisResult.tempo,
+        genre: audioAnalysis.genre,
+        tempo: audioAnalysis.tempo,
         masteringSettings: masteringSettings,
       });
 
