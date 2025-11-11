@@ -181,15 +181,26 @@ export default function MasteringScreen() {
 
     setShowingReview(true);
     setProcessing(true);
+    updateFile(file.id, { status: 'processing', progress: 0 });
     
     try {
+      // Stage 1: Initial analysis (0-50%)
       setCurrentStage('Analyzing your mix...');
+      for (let i = 0; i <= 50; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        updateFile(file.id, { progress: i });
+      }
       
       // Analyze audio
       const audioAnalysisResult = await analyzeAudioFile(file.originalUri, file.originalFileName);
       setAudioAnalysis(audioAnalysisResult);
 
+      // Stage 2: Generating review (51-90%)
       setCurrentStage('Generating personalized review...');
+      for (let i = 51; i <= 90; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        updateFile(file.id, { progress: i });
+      }
       
       // Try GPT-powered review first, fallback to basic if it fails
       let review: MixReviewResult;
@@ -201,12 +212,21 @@ export default function MasteringScreen() {
         review = analyzeMixQuality(audioAnalysisResult);
       }
       
+      // Stage 3: Finalizing (91-100%)
+      setCurrentStage('Preparing your review...');
+      for (let i = 91; i <= 100; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        updateFile(file.id, { progress: i });
+      }
+      
       setMixReview(review);
+      updateFile(file.id, { status: 'uploaded', progress: 0 });
       setProcessing(false);
       // Review is now shown, user can proceed to enhance
     } catch (error) {
       if (__DEV__) console.log('Review error:', error);
       Alert.alert('Analysis Error', 'Could not analyze your mix. Please try again.');
+      updateFile(file.id, { status: 'uploaded', progress: 0 });
       setProcessing(false);
       setShowingReview(false);
     }
@@ -653,13 +673,23 @@ export default function MasteringScreen() {
         {!mixReview && !processing && file.status === 'uploaded' && (
           <View className="mx-6 mb-8">
             {/* Primary Action: Start Enhancement */}
-            <Pressable
-              onPress={simulateSonicBoostProcessing}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl py-5 items-center active:opacity-80 mb-4"
-            >
-              <Text className="text-white text-lg font-bold">Start Sonic Enhancement</Text>
-              <Text className="text-purple-100 text-xs mt-1">Apply AI-powered processing now</Text>
-            </Pressable>
+            <View className="rounded-3xl overflow-hidden mb-4 border-2 border-purple-500 shadow-2xl">
+              <Pressable
+                onPress={simulateSonicBoostProcessing}
+                className="py-7 items-center active:opacity-70"
+                style={{
+                  backgroundColor: 'rgba(147, 51, 234, 0.2)',
+                }}
+              >
+                <View className="items-center">
+                  <View className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full items-center justify-center mb-3 shadow-lg">
+                    <Ionicons name="sparkles" size={32} color="#FFFFFF" />
+                  </View>
+                  <Text className="text-white text-2xl font-bold mb-2">Start Sonic Enhancement</Text>
+                  <Text className="text-purple-300 text-base">✨ Transform your audio with AI</Text>
+                </View>
+              </Pressable>
+            </View>
 
             {/* Secondary Action: Review First (Optional) */}
             <Pressable

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, Pressable, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -14,9 +14,14 @@ type HistoryScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 export default function HistoryScreen() {
   const navigation = useNavigation<HistoryScreenNavigationProp>();
   const { user } = useAuthStore();
-  const { getFilesByUserId, deleteFile, files } = useAudioStore();
+  const { getFilesByUserId, deleteFile, files, cleanupStaleUploads } = useAudioStore();
   const { stopAndClearAudio, currentFileId } = useAudioPlaybackStore();
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Auto-cleanup stale uploaded files on mount
+  useEffect(() => {
+    cleanupStaleUploads();
+  }, [cleanupStaleUploads]);
 
   // Re-compute userFiles on every render to reflect deletions immediately
   const userFiles = user ? files.filter(f => f.userId === user.id) : [];

@@ -36,6 +36,7 @@ interface AudioState {
   setHasProcessedInSession: (value: boolean) => void;
   getFilesByUserId: (userId: string) => AudioFile[];
   deleteFile: (id: string) => void;
+  cleanupStaleUploads: () => void;
 }
 
 export const useAudioStore = create<AudioState>()(
@@ -93,6 +94,25 @@ export const useAudioStore = create<AudioState>()(
         set((state) => ({
           files: state.files.filter((file) => file.id !== id),
           currentFile: state.currentFile?.id === id ? null : state.currentFile,
+        }));
+      },
+
+      cleanupStaleUploads: () => {
+        const now = new Date().getTime();
+        const twoHoursMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+        
+        set((state) => ({
+          files: state.files.filter((file) => {
+            // Keep all completed, processing, or failed files
+            if (file.status !== 'uploaded') return true;
+            
+            // Check if uploaded file is older than 2 hours
+            const createdAt = new Date(file.createdAt).getTime();
+            const age = now - createdAt;
+            
+            // Keep if less than 2 hours old
+            return age < twoHoursMs;
+          }),
         }));
       },
     }),
