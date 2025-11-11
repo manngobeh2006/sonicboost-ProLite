@@ -89,8 +89,9 @@ export default function HomeScreen() {
       // Navigate to mastering screen
       navigation.navigate('Mastering', { fileId: audioFile.id });
     } catch (error) {
-      console.error('Error picking file:', error);
-      Alert.alert('Error', 'Failed to pick audio file');
+      // Log to backend only, don't show console errors to users
+      if (__DEV__) console.log('File picker error:', error);
+      Alert.alert('Error', 'Failed to pick audio file. Please try again.');
       setLoading(false);
     }
   };

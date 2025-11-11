@@ -104,8 +104,8 @@ export default function MasteringScreen() {
 
       Alert.alert('Command Applied', command.description);
       setCommandInput('');
-    } catch (error) {
-      console.error('Error processing command:', error);
+      } catch (error) {
+      if (__DEV__) console.log('Command processing error:', error);
       Alert.alert('Error', 'Failed to process command');
     }
     setProcessingCommand(false);
@@ -125,7 +125,7 @@ export default function MasteringScreen() {
       setMixingTips(mixing);
       setPreMasteringTips(preMastering);
     } catch (error) {
-      console.error('Error loading AI insights:', error);
+      if (__DEV__) console.log('AI insights error:', error);
     }
     setLoadingTips(false);
   };
@@ -171,8 +171,8 @@ export default function MasteringScreen() {
         `${refFile.name} will be analyzed and used to enhance your audio.`
       );
     } catch (error) {
-      console.error('Error picking reference track:', error);
-      Alert.alert('Error', 'Failed to select reference track');
+      if (__DEV__) console.log('Reference track error:', error);
+      Alert.alert('Error', 'Failed to select reference track. Please try again.');
     }
   };
 
@@ -205,7 +205,7 @@ export default function MasteringScreen() {
       setProcessing(false);
       // Review is now shown, user can proceed to enhance
     } catch (error) {
-      console.error('Review error:', error);
+      if (__DEV__) console.log('Review error:', error);
       Alert.alert('Analysis Error', 'Could not analyze your mix. Please try again.');
       setProcessing(false);
       setShowingReview(false);
@@ -351,12 +351,12 @@ export default function MasteringScreen() {
       // Navigate to results screen
       navigation.replace('Results', { fileId: file.id });
     } catch (error) {
-      console.error('Mastering error:', error);
+      if (__DEV__) console.log('Processing error:', error);
       updateFile(file.id, {
         status: 'failed',
         error: 'Failed to process audio file',
       });
-      Alert.alert('Error', 'Failed to process audio file');
+      Alert.alert('Error', 'Failed to process audio file. Please try again.');
       setProcessing(false);
     }
   };
@@ -636,10 +636,15 @@ export default function MasteringScreen() {
             {/* Apply Enhancements Button */}
             <Pressable
               onPress={simulateSonicBoostProcessing}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl py-5 items-center active:opacity-80"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-3xl py-6 items-center active:opacity-70 shadow-xl border-2 border-green-500"
             >
-              <Text className="text-white text-lg font-bold">Apply AI Enhancements</Text>
-              <Text className="text-purple-100 text-xs mt-1">Optimize your mix automatically</Text>
+              <View className="flex-row items-center mb-1">
+                <View className="w-12 h-12 bg-white/20 rounded-full items-center justify-center mr-3">
+                  <Ionicons name="flash" size={26} color="#FFFFFF" />
+                </View>
+                <Text className="text-white text-xl font-bold">Apply AI Enhancements</Text>
+              </View>
+              <Text className="text-green-100 text-sm mt-1">Start optimizing your mix now</Text>
             </Pressable>
           </View>
         )}
