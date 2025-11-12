@@ -197,7 +197,8 @@ export default function ProfileScreen() {
       '🔒 Your privacy matters. We never share your audio files.\n\n' +
       '© 2025 SonicBoost. All rights reserved.',
       [
-        { text: 'Privacy Policy', onPress: () => Linking.openURL('https://sonicboost-privacy-policy.notion.site') },
+        { text: 'Privacy Policy', onPress: () => Linking.openURL('https://lemon-metacarpal-c60.notion.site/Privacy-Policy-29d3cfc7ef1480f6aeb9f51ee181b202') },
+        { text: 'Terms of Service', onPress: () => Linking.openURL('https://lemon-metacarpal-c60.notion.site/Terms-of-Service-29d3cfc7ef1480efa08ecd61b13a9d01') },
         { text: 'Close', style: 'cancel' },
       ]
     );
