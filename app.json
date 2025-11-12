@@ -50,7 +50,12 @@
       "expo-sqlite",
       "expo-video",
       "expo-web-browser",
-      "expo-ffmpeg-kit"
+      [
+        "expo-ffmpeg-kit",
+        {
+          "package": "audio"
+        }
+      ]
     ],
     "extra": {
       "eas": {
