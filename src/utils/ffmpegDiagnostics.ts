@@ -11,6 +11,26 @@ export interface DiagnosticResult {
   version?: string;
   error?: string;
   testPassed?: boolean;
+  logs?: string[];
+}
+
+// Store recent FFmpeg logs for debugging
+const recentLogs: string[] = [];
+const MAX_LOGS = 20;
+
+export function addFFmpegLog(message: string) {
+  recentLogs.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+  if (recentLogs.length > MAX_LOGS) {
+    recentLogs.shift();
+  }
+}
+
+export function getRecentLogs(): string[] {
+  return [...recentLogs];
+}
+
+export function clearLogs() {
+  recentLogs.length = 0;
 }
 
 /**
@@ -85,6 +105,7 @@ export async function runFFmpegDiagnostics(): Promise<DiagnosticResult> {
  */
 export async function getFFmpegInfo(): Promise<string> {
   const diagnostic = await runFFmpegDiagnostics();
+  const logs = getRecentLogs();
   
   let info = '📊 FFmpeg Diagnostics:\n\n';
   info += `Available: ${diagnostic.available ? '✅ Yes' : '❌ No'}\n`;
@@ -99,6 +120,15 @@ export async function getFFmpegInfo(): Promise<string> {
   
   if (diagnostic.error) {
     info += `\nError: ${diagnostic.error}\n`;
+  }
+  
+  if (logs.length > 0) {
+    info += `\n📝 Recent Processing Logs (${logs.length}):\n`;
+    logs.slice(-10).forEach(log => {
+      info += `${log}\n`;
+    });
+  } else {
+    info += `\n📝 No recent processing logs\n`;
   }
   
   return info;

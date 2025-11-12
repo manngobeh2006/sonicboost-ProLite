@@ -1,6 +1,7 @@
 import { FFmpegKit, ReturnCode } from 'expo-ffmpeg-kit';
 import * as FileSystem from 'expo-file-system/legacy';
 import { MasteringSettings, AudioGenre } from './audioProcessing';
+import { addFFmpegLog } from './ffmpegDiagnostics';
 
 /**
  * Professional FFmpeg Audio Processor
@@ -97,9 +98,7 @@ export async function processAudioWithFFmpeg(
       };
     }
 
-    console.log('🎛️ FFmpeg processing:', {
-      inputPath,
-      outputPath,
+    const logData = {
       genre,
       settings: {
         volumeBoost: Math.round(settings.volumeBoost * 100) + '%',
@@ -108,31 +107,50 @@ export async function processAudioWithFFmpeg(
         bassBoost: Math.round(settings.bassBoost * 100) + '%',
         compression: Math.round(settings.compression * 100) + '%',
       },
-    });
+    };
+    console.log('🎛️ FFmpeg processing:', logData);
+    addFFmpegLog(`Processing: ${genre}, vol=${logData.settings.volumeBoost}`);
+    addFFmpegLog(`Input: ${inputPath}`);
+    addFFmpegLog(`Output: ${outputPath}`);
 
     // Try complex filter chain first
     const filterChain = buildFilterChain(settings, genre);
     let command = `-y -i "${inputPath}" -af "${filterChain}" -ar 44100 -ab 256k "${outputPath}"`;
     
     console.log('🔧 FFmpeg command:', command);
+    addFFmpegLog(`Command: ${command.substring(0, 150)}...`);
 
     // Execute FFmpeg
+    console.log('⏳ Executing FFmpeg command...');
     let session = await FFmpegKit.execute(command);
     let returnCode = await session.getReturnCode();
+    const failReason = await session.getFailStackTrace();
 
     // If complex filter fails, try simpler processing
     if (!ReturnCode.isSuccess(returnCode)) {
-      console.log('⚠️ Complex filter failed, trying simple processing...');
       const output = await session.getOutput();
-      console.log('FFmpeg output:', output);
+      console.log('❌ Complex filter failed!');
+      console.log('📋 Return code:', returnCode?.getValue());
+      console.log('📋 FFmpeg output:', output);
+      console.log('📋 Fail trace:', failReason);
+      addFFmpegLog(`FAILED: Code ${returnCode?.getValue()}`);
+      addFFmpegLog(`Error: ${output?.substring(0, 200)}`);
       
       // Fallback: Simple volume boost only
       const volumeMultiplier = 1.0 + (settings.volumeBoost * 0.5); // 1.0 to 1.5x
       const simpleCommand = `-y -i "${inputPath}" -af "volume=${volumeMultiplier}" -ar 44100 -ab 256k "${outputPath}"`;
       
-      console.log('🔧 Fallback command:', simpleCommand);
+      console.log('🔧 Trying fallback command:', simpleCommand);
+      addFFmpegLog('Trying simple fallback...');
       session = await FFmpegKit.execute(simpleCommand);
       returnCode = await session.getReturnCode();
+      
+      if (!ReturnCode.isSuccess(returnCode)) {
+        const fallbackOutput = await session.getOutput();
+        console.log('❌ Fallback also failed!');
+        console.log('📋 Fallback output:', fallbackOutput);
+        addFFmpegLog(`Fallback FAILED: ${fallbackOutput?.substring(0, 150)}`);
+      }
     }
 
     if (ReturnCode.isSuccess(returnCode)) {
@@ -140,6 +158,7 @@ export async function processAudioWithFFmpeg(
       const outputInfo = await FileSystem.getInfoAsync(outputPath);
       if (outputInfo.exists) {
         console.log('✅ FFmpeg processing complete');
+        addFFmpegLog('✅ Processing SUCCESS');
         return {
           success: true,
           outputPath,
