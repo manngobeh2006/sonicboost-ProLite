@@ -388,12 +388,16 @@ export default function ResultsScreen() {
       return;
     }
 
-    // Check revision limit (3 per song for unlimited users)
+    // Tier-based revision limits: Pro = 1, Unlimited = 3
     const revisionsUsed = (file as any).revisionUsed || 0;
-    if (revisionsUsed >= 3) {
+    const maxRevisions = isUnlimited ? 3 : isPro ? 1 : 0;
+    
+    if (revisionsUsed >= maxRevisions) {
       Alert.alert(
         'Revision Limit Reached',
-        'You\'ve used all 3 revisions for this song. This helps ensure optimal server performance.\n\nTip: Process a new version of the song to get 3 more revisions!'
+        isUnlimited 
+          ? 'You\'ve used all 3 AI revisions for this song.\n\nTip: Process a new version to get 3 more revisions!'
+          : 'You\'ve used your 1 AI revision for this song.\n\nUpgrade to Unlimited for 3 revisions per song, or process a new version to get another revision.'
       );
       return;
     }
@@ -470,7 +474,8 @@ export default function ResultsScreen() {
 
       setShowRevisionModal(false);
       
-      const remainingRevisions = 3 - updatedRevisionsCount;
+      const maxRevisions = isUnlimited ? 3 : 1;
+      const remainingRevisions = maxRevisions - updatedRevisionsCount;
       Alert.alert(
         'Revision Applied! ✨',
         `Your audio has been reprocessed with: "${revisionCommand}"\n\n${remainingRevisions} revision${remainingRevisions !== 1 ? 's' : ''} remaining for this song.`
