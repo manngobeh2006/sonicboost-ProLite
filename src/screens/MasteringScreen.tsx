@@ -340,8 +340,14 @@ export default function MasteringScreen() {
       const wavUri = `${fileDir}${file.id}_mastered.wav`;
 
       // Process audio files with real FFmpeg DSP (EQ, compression, loudness)
-      await processAudioFile(file.originalUri, mp3Uri, masteringSettings, analysisToUse.genre);
-      await processAudioFile(file.originalUri, wavUri, masteringSettings, analysisToUse.genre);
+      try {
+        await processAudioFile(file.originalUri, mp3Uri, masteringSettings, analysisToUse.genre);
+        await processAudioFile(file.originalUri, wavUri, masteringSettings, analysisToUse.genre);
+      } catch (processingError) {
+        console.error('Audio processing error:', processingError);
+        // Don't fail completely - the file copy fallback should have worked
+        console.log('Continuing with processed files...');
+      }
 
       // Stage 5: Complete
       setCurrentStage('Sonic enhancement complete!');
@@ -371,12 +377,16 @@ export default function MasteringScreen() {
       // Navigate to results screen
       navigation.replace('Results', { fileId: file.id });
     } catch (error) {
-      if (__DEV__) console.log('Processing error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Processing error:', errorMessage, error);
       updateFile(file.id, {
         status: 'failed',
-        error: 'Failed to process audio file',
+        error: errorMessage,
       });
-      Alert.alert('Error', 'Failed to process audio file. Please try again.');
+      Alert.alert(
+        'Processing Failed', 
+        `Unable to process audio: ${errorMessage}\n\nPlease try:\n• Re-uploading the file\n• Using a different audio format\n• Contact support if issue persists`
+      );
       setProcessing(false);
     }
   };

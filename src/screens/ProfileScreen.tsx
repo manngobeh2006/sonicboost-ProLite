@@ -7,6 +7,7 @@ import { useAuthStore } from '../state/authStore';
 import { apiClient } from '../api/backend';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
+import { getFFmpegInfo } from '../utils/ffmpegDiagnostics';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
 
@@ -202,6 +203,18 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDiagnostics = async () => {
+    setLoading(true);
+    try {
+      const info = await getFFmpegInfo();
+      Alert.alert('System Diagnostics', info, [{ text: 'OK' }]);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to run diagnostics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getSubscriptionBadgeColor = () => {
     const tier = user?.subscriptionTier || user?.subscriptionStatus || 'free';
     switch (tier) {
@@ -373,6 +386,27 @@ export default function ProfileScreen() {
         {/* Settings */}
         <View className="mx-6 mb-6">
           <Text className="text-white text-lg font-semibold mb-4">Settings</Text>
+
+          <Pressable 
+            onPress={handleDiagnostics}
+            disabled={loading}
+            className="bg-gray-900 rounded-2xl p-4 flex-row items-center justify-between mb-3 border border-gray-800 active:opacity-70"
+          >
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 bg-green-600/20 rounded-full items-center justify-center mr-3">
+                <Ionicons name="bug" size={20} color="#10B981" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white text-base">Run Diagnostics</Text>
+                <Text className="text-gray-500 text-xs mt-0.5">Test FFmpeg audio processing</Text>
+              </View>
+            </View>
+            {loading ? (
+              <ActivityIndicator size="small" color="#10B981" />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+            )}
+          </Pressable>
 
           <Pressable 
             onPress={handleHelpSupport}

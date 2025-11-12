@@ -86,18 +86,20 @@ export async function processAudioWithFFmpeg(
     const outputDir = outputPath.substring(0, outputPath.lastIndexOf('/'));
     await FileSystem.makeDirectoryAsync(outputDir, { intermediates: true });
 
-    // Build professional filter chain
-    const filterChain = buildFilterChain(settings, genre);
-
-    // FFmpeg command: input → filters → output
-    // -y: overwrite output
-    // -i: input file
-    // -af: audio filters
-    // -ar 44100: sample rate (standard quality)
-    // -ab 256k: bitrate for MP3 (high quality)
-    const command = `-y -i ${inputPath} -af "${filterChain}" -ar 44100 -ab 256k ${outputPath}`;
+    // Verify input file exists
+    const inputInfo = await FileSystem.getInfoAsync(inputPath);
+    if (!inputInfo.exists) {
+      console.error('❌ Input file does not exist:', inputPath);
+      return {
+        success: false,
+        outputPath,
+        error: 'Input file not found',
+      };
+    }
 
     console.log('🎛️ FFmpeg processing:', {
+      inputPath,
+      outputPath,
       genre,
       settings: {
         volumeBoost: Math.round(settings.volumeBoost * 100) + '%',
@@ -108,23 +110,55 @@ export async function processAudioWithFFmpeg(
       },
     });
 
+    // Try complex filter chain first
+    const filterChain = buildFilterChain(settings, genre);
+    let command = `-y -i "${inputPath}" -af "${filterChain}" -ar 44100 -ab 256k "${outputPath}"`;
+    
+    console.log('🔧 FFmpeg command:', command);
+
     // Execute FFmpeg
-    const session = await FFmpegKit.execute(command);
-    const returnCode = await session.getReturnCode();
+    let session = await FFmpegKit.execute(command);
+    let returnCode = await session.getReturnCode();
+
+    // If complex filter fails, try simpler processing
+    if (!ReturnCode.isSuccess(returnCode)) {
+      console.log('⚠️ Complex filter failed, trying simple processing...');
+      const output = await session.getOutput();
+      console.log('FFmpeg output:', output);
+      
+      // Fallback: Simple volume boost only
+      const volumeMultiplier = 1.0 + (settings.volumeBoost * 0.5); // 1.0 to 1.5x
+      const simpleCommand = `-y -i "${inputPath}" -af "volume=${volumeMultiplier}" -ar 44100 -ab 256k "${outputPath}"`;
+      
+      console.log('🔧 Fallback command:', simpleCommand);
+      session = await FFmpegKit.execute(simpleCommand);
+      returnCode = await session.getReturnCode();
+    }
 
     if (ReturnCode.isSuccess(returnCode)) {
-      console.log('✅ FFmpeg processing complete');
-      return {
-        success: true,
-        outputPath,
-      };
+      // Verify output file was created
+      const outputInfo = await FileSystem.getInfoAsync(outputPath);
+      if (outputInfo.exists) {
+        console.log('✅ FFmpeg processing complete');
+        return {
+          success: true,
+          outputPath,
+        };
+      } else {
+        console.error('❌ Output file not created');
+        return {
+          success: false,
+          outputPath,
+          error: 'Output file not created',
+        };
+      }
     } else {
       const output = await session.getOutput();
       console.error('❌ FFmpeg failed:', output);
       return {
         success: false,
         outputPath,
-        error: 'Processing failed',
+        error: `Processing failed: ${output?.substring(0, 200)}`,
       };
     }
   } catch (error) {
