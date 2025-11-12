@@ -71,7 +71,7 @@ const PLANS = [
     priceId: STRIPE_PRICE_ID_UNLIMITED,
     features: [
       'Unlimited enhancements',
-      '✨ 3 AI Revisions per song',
+      '✨ 2 AI Revisions per song',
       'MP3 + WAV export',
       'Highest quality processing',
       'Reference track matching',
