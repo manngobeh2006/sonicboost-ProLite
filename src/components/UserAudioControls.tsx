@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +30,8 @@ export default function UserAudioControls({
   onReprocess,
   isProcessing,
 }: UserAudioControlsProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const updateAdjustment = (key: keyof UserAudioAdjustments, value: number) => {
     onAdjustmentsChange({
       ...adjustments,
@@ -49,21 +51,35 @@ export default function UserAudioControls({
 
   return (
     <View className="mx-6 mb-6">
-      {/* Header */}
-      <View className="flex-row items-center justify-between mb-4">
-        <View className="flex-row items-center">
-          <View className="w-8 h-8 bg-purple-600 rounded-full items-center justify-center mr-2">
-            <Ionicons name="options" size={18} color="white" />
+      {/* Collapsible Header */}
+      <Pressable
+        onPress={() => setIsExpanded(!isExpanded)}
+        className="bg-gray-900 rounded-2xl p-4 border border-purple-600/30 flex-row items-center justify-between mb-3 active:opacity-70"
+      >
+        <View className="flex-row items-center flex-1">
+          <View className="w-10 h-10 bg-purple-600/20 rounded-full items-center justify-center mr-3">
+            <Ionicons name="options" size={20} color="#9333EA" />
           </View>
-          <Text className="text-white text-lg font-semibold">Manual Controls</Text>
+          <View className="flex-1">
+            <Text className="text-white text-base font-semibold">Manual Controls</Text>
+            <Text className="text-gray-400 text-xs mt-0.5">
+              {isExpanded ? 'Tap to collapse' : 'Tap to fine-tune audio'}
+            </Text>
+          </View>
+          <View className="bg-purple-600 px-3 py-1 rounded-full mr-2">
+            <Text className="text-white text-xs font-bold">UNLIMITED</Text>
+          </View>
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={24} 
+            color="#9333EA" 
+          />
         </View>
-        <View className="bg-purple-600 px-3 py-1 rounded-full">
-          <Text className="text-white text-xs font-bold">UNLIMITED</Text>
-        </View>
-      </View>
+      </Pressable>
 
-      {/* Controls Card */}
-      <View className="bg-gray-900 rounded-3xl p-5 border border-purple-600/30">
+      {/* Expandable Controls */}
+      {isExpanded && (
+        <View className="bg-gray-900 rounded-3xl p-5 border border-purple-600/30">
         {/* High (Treble/Brightness) */}
         <View className="mb-6">
           <View className="flex-row items-center justify-between mb-3">
@@ -231,7 +247,8 @@ export default function UserAudioControls({
             </Text>
           </View>
         </View>
-      </View>
+        </View>
+      )}
     </View>
   );
 }
