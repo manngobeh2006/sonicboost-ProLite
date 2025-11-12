@@ -433,9 +433,21 @@ export default function ResultsScreen() {
       });
 
       // Reload audio for immediate playback
+      setCurrentVersion('mastered');
       await loadAudio(mp3Uri, 'mastered');
 
       Alert.alert('Success', 'Audio reprocessed with your adjustments!');
+      
+      // Auto-play the reprocessed audio
+      setTimeout(async () => {
+        if (sound) {
+          try {
+            await sound.playAsync();
+          } catch (e) {
+            console.log('Auto-play error:', e);
+          }
+        }
+      }, 300);
     } catch (error) {
       console.error('Reprocessing error:', error);
       Alert.alert('Error', 'Failed to reprocess audio. Please try again.');
@@ -451,16 +463,16 @@ export default function ResultsScreen() {
       return;
     }
 
-    // Tier-based revision limits: Pro = 1, Unlimited = 3
+    // Tier-based revision limits: Pro = 1, Unlimited = 2
     const revisionsUsed = (file as any).revisionUsed || 0;
-    const maxRevisions = isUnlimited ? 3 : isPro ? 1 : 0;
+    const maxRevisions = isUnlimited ? 2 : isPro ? 1 : 0;
     
     if (revisionsUsed >= maxRevisions) {
       Alert.alert(
         'Revision Limit Reached',
         isUnlimited 
-          ? 'You\'ve used all 3 AI revisions for this song.\n\nTip: Process a new version to get 3 more revisions!'
-          : 'You\'ve used your 1 AI revision for this song.\n\nUpgrade to Unlimited for 3 revisions per song, or process a new version to get another revision.'
+          ? 'You\'ve used all 2 AI revisions for this song.\n\nTip: Process a new version to get 2 more revisions!'
+          : 'You\'ve used your 1 AI revision for this song.\n\nUpgrade to Unlimited for 2 revisions per song, or process a new version to get another revision.'
       );
       return;
     }
@@ -537,7 +549,7 @@ export default function ResultsScreen() {
 
       setShowRevisionModal(false);
       
-      const maxRevisions = isUnlimited ? 3 : 1;
+      const maxRevisions = isUnlimited ? 2 : 1;
       const remainingRevisions = maxRevisions - updatedRevisionsCount;
       Alert.alert(
         'Revision Applied! ✨',
@@ -937,17 +949,25 @@ export default function ResultsScreen() {
         {/* Quick Actions */}
         <View className="mx-6 mb-8">
           {/* AI Revision (Unlimited Only) */}
-          {isUnlimited && (
-            <Pressable
-              onPress={() => setShowRevisionModal(true)}
-              className="bg-blue-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
-            >
-              <Text className="text-white text-base font-semibold">✨ AI Revision</Text>
-              <Text className="text-blue-200 text-xs mt-1">
-                3 revisions per song
-              </Text>
-            </Pressable>
-          )}
+          {isUnlimited && (() => {
+            const revisionsUsed = (file as any).revisionUsed || 0;
+            const maxRevisions = 2;
+            const remaining = maxRevisions - revisionsUsed;
+            
+            return (
+              <Pressable
+                onPress={() => setShowRevisionModal(true)}
+                className="bg-blue-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
+              >
+                <Text className="text-white text-base font-semibold">✨ AI Revision</Text>
+                <Text className="text-blue-200 text-xs mt-1">
+                  {remaining > 0 
+                    ? `${remaining} revision${remaining !== 1 ? 's' : ''} remaining for this song`
+                    : 'No revisions left for this song'}
+                </Text>
+              </Pressable>
+            );
+          })()}
           <Pressable
             onPress={() => navigation.navigate('Home')}
             className="bg-purple-600 rounded-2xl py-4 items-center active:opacity-80"
