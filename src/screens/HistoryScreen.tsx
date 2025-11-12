@@ -29,6 +29,33 @@ export default function HistoryScreen() {
   const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
   const hasPremium = isPro || isUnlimited; // Any paid plan
 
+  // Define all hooks before conditional returns (React Hooks rules)
+  const handleDelete = useCallback(async (fileId: string, fileName: string) => {
+    Alert.alert(
+      'Delete File',
+      `Are you sure you want to delete "${fileName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            // Stop audio if this file is currently playing
+            if (currentFileId === fileId) {
+              await stopAndClearAudio();
+            }
+            
+            // Delete the file from store
+            deleteFile(fileId);
+            
+            // Force re-render to show updated list
+            setRefreshKey(prev => prev + 1);
+          },
+        },
+      ]
+    );
+  }, [deleteFile, currentFileId, stopAndClearAudio]);
+
   // Check if user is on free plan and show upgrade screen
   if (!hasPremium) {
     return (
@@ -120,32 +147,6 @@ export default function HistoryScreen() {
       navigation.navigate('Mastering', { fileId: file.id });
     }
   };
-
-  const handleDelete = useCallback(async (fileId: string, fileName: string) => {
-    Alert.alert(
-      'Delete File',
-      `Are you sure you want to delete "${fileName}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            // Stop audio if this file is currently playing
-            if (currentFileId === fileId) {
-              await stopAndClearAudio();
-            }
-            
-            // Delete the file from store
-            deleteFile(fileId);
-            
-            // Force re-render to show updated list
-            setRefreshKey(prev => prev + 1);
-          },
-        },
-      ]
-    );
-  }, [deleteFile, currentFileId, stopAndClearAudio]);
 
   const getStatusColor = (status: AudioFile['status']) => {
     switch (status) {
