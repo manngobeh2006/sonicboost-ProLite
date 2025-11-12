@@ -13,7 +13,7 @@ type SubscriptionsScreenNavigationProp = NativeStackNavigationProp<RootStackPara
 // Real Stripe Price IDs
 const STRIPE_PRICE_ID_SINGLE = 'price_1SLC6tRWPNzpeJiuYVKtG87S'; // One-time payment
 const STRIPE_PRICE_ID_PRO = 'price_1SLCDtRWPNzpeJiuh09ZNfrp'; // Pro - $11.99/month
-const STRIPE_PRICE_ID_UNLIMITED = 'price_1SODGMRWPNzpeJiu3KDZnmz1'; // Unlimited - $29/month
+const STRIPE_PRICE_ID_UNLIMITED = 'price_1SSgNDRWPNzpeJiuzYAzHe5c'; // Unlimited - $16.99/month
 
 const PLANS = [
   {
@@ -66,12 +66,12 @@ const PLANS = [
   {
     id: 'unlimited',
     name: 'Unlimited',
-    price: '$29',
+    price: '$16.99',
     period: '/month',
     priceId: STRIPE_PRICE_ID_UNLIMITED,
     features: [
       'Unlimited enhancements',
-      '✨ AI Revision - Natural language control',
+      '✨ 3 AI Revisions per song',
       'MP3 + WAV export',
       'Highest quality processing',
       'Reference track matching',

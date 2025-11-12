@@ -520,7 +520,7 @@ export default function ResultsScreen() {
       const updatedRevisionsCount = revisionsUsed + 1;
       useAudioStore.getState().updateFile(file.id, { 
         masteringSettings: newSettings, 
-        revisionUsed: updatedRevisionsCount > 0 
+        revisionUsed: updatedRevisionsCount 
       });
 
       // Give a moment for file system to flush the reprocessed audio
@@ -1005,7 +1005,7 @@ export default function ResultsScreen() {
               className="bg-purple-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
             >
               <Text className="text-white text-base font-semibold">View Plans</Text>
-              <Text className="text-purple-200 text-xs mt-1">Starting at $11.99/mo</Text>
+              <Text className="text-purple-200 text-xs mt-1">From $4.99 to $16.99/mo</Text>
             </Pressable>
 
             {/* Only show one-time payment for free users */}
