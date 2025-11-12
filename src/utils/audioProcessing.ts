@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio } from 'expo-av';
+import { processAudioWithFFmpeg } from './ffmpegProcessor';
 
 /**
  * Intelligent Audio Mastering Utility
@@ -601,31 +602,34 @@ export function calculateIntelligentMastering(analysis: AudioAnalysis): Masterin
 }
 
 /**
- * Process audio file with intelligent mastering
- * Settings are stored and applied during playback for sonic enhancement
+ * Process audio file with intelligent mastering using FFmpeg
+ * Applies REAL DSP: EQ, compression, limiting, and loudness maximization
  */
 export async function processAudioFile(
   inputUri: string,
   outputUri: string,
-  settings: MasteringSettings
+  settings: MasteringSettings,
+  genre: AudioGenre = 'unknown'
 ): Promise<void> {
   try {
-    // Copy the original file to the output location
-    await FileSystem.copyAsync({
-      from: inputUri,
-      to: outputUri,
-    });
+    console.log('🎵 Starting FFmpeg real-time audio processing...');
     
-    // The sonic enhancement is applied during playback using the stored settings
-    // This ensures genre-aware processing with maximum quality preservation
-    console.log('✅ Audio processed for sonic enhancement with settings:', {
+    // Process with FFmpeg - applies real EQ, compression, and loudness
+    const result = await processAudioWithFFmpeg(inputUri, outputUri, settings, genre);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'FFmpeg processing failed');
+    }
+    
+    console.log('✅ Real audio processing complete with:', {
       volumeBoost: Math.round(settings.volumeBoost * 100) + '%',
       brightness: Math.round(settings.brightness * 100) + '%',
       midRange: Math.round(settings.midRange * 100) + '%',
       bassBoost: Math.round(settings.bassBoost * 100) + '%',
+      compression: Math.round(settings.compression * 100) + '%',
     });
   } catch (error) {
-    console.error('Error processing audio:', error);
+    if (__DEV__) console.log('FFmpeg processing error:', error);
     throw new Error('Failed to process audio file');
   }
 }

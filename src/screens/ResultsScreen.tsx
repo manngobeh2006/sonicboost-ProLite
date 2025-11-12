@@ -437,15 +437,16 @@ export default function ResultsScreen() {
       // Apply command to current settings (incremental adjustment)
       const newSettings = applyAudioCommand(currentSettings, cmd);
 
-      // Re-process the audio with new settings (overwrite existing)
+      // Re-process the audio with new settings (overwrite existing) using FFmpeg
       const mp3Uri = file.masteredMp3Uri || file.masteredUri;
       const wavUri = file.masteredWavUri || file.masteredUri;
+      const genre = (file.genre || analysis.genre) as AudioGenre;
       
       if (mp3Uri) {
-        await processAudioFile(file.originalUri, mp3Uri, newSettings);
+        await processAudioFile(file.originalUri, mp3Uri, newSettings, genre);
       }
       if (wavUri) {
-        await processAudioFile(file.originalUri, wavUri, newSettings);
+        await processAudioFile(file.originalUri, wavUri, newSettings, genre);
       }
 
       // Update file with new settings and increment revision count

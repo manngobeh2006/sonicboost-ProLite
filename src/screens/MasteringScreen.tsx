@@ -339,9 +339,9 @@ export default function MasteringScreen() {
       const mp3Uri = `${fileDir}${file.id}_mastered.mp3`;
       const wavUri = `${fileDir}${file.id}_mastered.wav`;
 
-      // Process audio files (this copies them and marks them for enhanced playback)
-      await processAudioFile(file.originalUri, mp3Uri, masteringSettings);
-      await processAudioFile(file.originalUri, wavUri, masteringSettings);
+      // Process audio files with real FFmpeg DSP (EQ, compression, loudness)
+      await processAudioFile(file.originalUri, mp3Uri, masteringSettings, analysisToUse.genre);
+      await processAudioFile(file.originalUri, wavUri, masteringSettings, analysisToUse.genre);
 
       // Stage 5: Complete
       setCurrentStage('Sonic enhancement complete!');
