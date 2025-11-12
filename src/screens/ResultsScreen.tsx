@@ -12,8 +12,9 @@ import { apiClient } from '../api/backend';
 import { useAudioStore } from '../state/audioStore';
 import { useAudioPlaybackStore } from '../state/audioPlaybackStore';
 import { RootStackParamList } from '../navigation/types';
-import { createMasteredSound, createOriginalSound, getGenreDisplayName, AudioGenre, analyzeAudioFile, calculateIntelligentMastering, processAudioFile } from '../utils/audioProcessing';
+import { createMasteredSound, createOriginalSound, getGenreDisplayName, AudioGenre, analyzeAudioFile, calculateIntelligentMastering, processAudioFile, applyUserAdjustments, UserAudioAdjustments, MasteringSettings } from '../utils/audioProcessing';
 import { parseAudioCommand, applyAudioCommand } from '../utils/audioAI';
+import UserAudioControls, { INITIAL_ADJUSTMENTS } from '../components/UserAudioControls';
 
 type ResultsScreenRouteProp = RouteProp<RootStackParamList, 'Results'>;
 type ResultsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Results'>;
@@ -43,6 +44,8 @@ export default function ResultsScreen() {
   const [isRunningRevision, setIsRunningRevision] = useState(false);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [justPurchasedOneTime, setJustPurchasedOneTime] = useState(false);
+  const [userAdjustments, setUserAdjustments] = useState<UserAudioAdjustments>(INITIAL_ADJUSTMENTS);
+  const [isReprocessing, setIsReprocessing] = useState(false);
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
   const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
@@ -378,6 +381,66 @@ export default function ResultsScreen() {
       Alert.alert('Error', error?.message || 'Failed to start checkout');
     } finally {
       setIsCreatingCheckout(false);
+    }
+  };
+
+  const handleReprocessWithAdjustments = async () => {
+    if (!file) return;
+    if (!file.originalUri || !file.masteredUri) {
+      Alert.alert('Error', 'Audio files not found');
+      return;
+    }
+
+    // Stop any currently playing audio
+    await stopGlobalAudio();
+
+    setIsReprocessing(true);
+    try {
+      // Get base settings (from original AI processing)
+      const currentFile = useAudioStore.getState().files.find(f => f.id === fileId);
+      const baseSettings: MasteringSettings = currentFile?.masteringSettings || {
+        volumeBoost: 0.8,
+        brightness: 0.7,
+        midRange: 0.7,
+        bassBoost: 0.6,
+        compression: 0.6,
+        pitchShift: 0.5,
+      };
+
+      // Apply user adjustments
+      const adjustedSettings = applyUserAdjustments(baseSettings, userAdjustments);
+
+      // Get genre for processing
+      const genre: AudioGenre = (file.genre as AudioGenre) || 'unknown';
+
+      // Reprocess audio with adjusted settings
+      const fileDir = `${FileSystem.documentDirectory}mastered/`;
+      await FileSystem.makeDirectoryAsync(fileDir, { intermediates: true });
+
+      const mp3Uri = `${fileDir}${file.id}_mastered.mp3`;
+      const wavUri = `${fileDir}${file.id}_mastered.wav`;
+
+      // Process with FFmpeg using adjusted settings
+      await processAudioFile(file.originalUri, mp3Uri, adjustedSettings, genre);
+      await processAudioFile(file.originalUri, wavUri, adjustedSettings, genre);
+
+      // Update file store with new URIs and settings
+      useAudioStore.getState().updateFile(file.id, {
+        masteredUri: mp3Uri,
+        masteredMp3Uri: mp3Uri,
+        masteredWavUri: wavUri,
+        masteringSettings: adjustedSettings,
+      });
+
+      // Reload audio for immediate playback
+      await loadAudio(mp3Uri, 'mastered');
+
+      Alert.alert('Success', 'Audio reprocessed with your adjustments!');
+    } catch (error) {
+      console.error('Reprocessing error:', error);
+      Alert.alert('Error', 'Failed to reprocess audio. Please try again.');
+    } finally {
+      setIsReprocessing(false);
     }
   };
 
@@ -860,6 +923,16 @@ export default function ResultsScreen() {
             </View>
           )}
         </View>
+
+        {/* Manual Controls (Unlimited Only) */}
+        {isUnlimited && file.status === 'completed' && (
+          <UserAudioControls
+            adjustments={userAdjustments}
+            onAdjustmentsChange={setUserAdjustments}
+            onReprocess={handleReprocessWithAdjustments}
+            isProcessing={isReprocessing}
+          />
+        )}
 
         {/* Quick Actions */}
         <View className="mx-6 mb-8">

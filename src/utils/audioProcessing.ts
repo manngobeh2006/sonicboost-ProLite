@@ -602,6 +602,66 @@ export function calculateIntelligentMastering(analysis: AudioAnalysis): Masterin
 }
 
 /**
+ * Apply user manual adjustments to mastering settings
+ * User adjustments are relative modifications to the AI-calculated settings
+ * 
+ * @param baseSettings - AI-calculated mastering settings
+ * @param userAdjustments - User's manual adjustments from UI controls
+ * @returns Modified mastering settings with user adjustments applied
+ */
+export interface UserAudioAdjustments {
+  high: number;    // -6 to +6 dB (brightness adjustment)
+  mid: number;     // -6 to +6 dB (vocal/mid-range adjustment)
+  low: number;     // -6 to +6 dB (bass adjustment)
+  tempo: number;   // -12 to +12 semitones (pitch shift)
+}
+
+export function applyUserAdjustments(
+  baseSettings: MasteringSettings,
+  userAdjustments: UserAudioAdjustments
+): MasteringSettings {
+  // Helper to clamp values between 0 and 1
+  const clamp = (value: number, min = 0, max = 1): number => {
+    return Math.max(min, Math.min(max, value));
+  };
+
+  // Helper to convert dB adjustment to 0-1 scale modifier
+  // Each dB represents approximately 0.083 on the 0-1 scale (6dB = 0.5 range)
+  const dbToScale = (db: number): number => {
+    return db / 12; // -6 to +6 dB maps to -0.5 to +0.5
+  };
+
+  // Apply adjustments
+  const adjustedSettings: MasteringSettings = {
+    // High frequencies (brightness)
+    brightness: clamp(baseSettings.brightness + dbToScale(userAdjustments.high)),
+    
+    // Mid-range (vocals/presence)
+    midRange: clamp(baseSettings.midRange + dbToScale(userAdjustments.mid)),
+    
+    // Low frequencies (bass)
+    bassBoost: clamp(baseSettings.bassBoost + dbToScale(userAdjustments.low)),
+    
+    // Tempo/pitch shift: -12 to +12 semitones maps to 0 to 1 scale
+    // 0 semitones = 0.5 (neutral), -12 = 0, +12 = 1
+    pitchShift: clamp((userAdjustments.tempo + 12) / 24),
+    
+    // Keep other settings unchanged
+    volumeBoost: baseSettings.volumeBoost,
+    compression: baseSettings.compression,
+  };
+
+  console.log('🎛️ User adjustments applied:', {
+    highAdj: `${userAdjustments.high > 0 ? '+' : ''}${userAdjustments.high.toFixed(1)} dB`,
+    midAdj: `${userAdjustments.mid > 0 ? '+' : ''}${userAdjustments.mid.toFixed(1)} dB`,
+    lowAdj: `${userAdjustments.low > 0 ? '+' : ''}${userAdjustments.low.toFixed(1)} dB`,
+    tempoAdj: `${userAdjustments.tempo > 0 ? '+' : ''}${userAdjustments.tempo} semitones`,
+  });
+
+  return adjustedSettings;
+}
+
+/**
  * Process audio file with intelligent mastering using FFmpeg
  * Applies REAL DSP: EQ, compression, limiting, and loudness maximization
  */
