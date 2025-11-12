@@ -196,7 +196,7 @@ export default function ProfileScreen() {
       '🔒 Your privacy matters. We never share your audio files.\n\n' +
       '© 2025 SonicBoost. All rights reserved.',
       [
-        { text: 'Privacy Policy', onPress: () => Linking.openURL('https://your-privacy-policy-url.com') },
+        { text: 'Privacy Policy', onPress: () => Linking.openURL('https://sonicboost-privacy-policy.notion.site') },
         { text: 'Close', style: 'cancel' },
       ]
     );
