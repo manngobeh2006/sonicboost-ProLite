@@ -7,12 +7,12 @@ import { AudioAnalysis } from './audioProcessing';
  */
 
 export interface MixReviewResult {
-  overallScore: number; // 0-100, always encouraging (60-95 range)
+  overallScore: number; // 0-100, honest assessment (40-95 range)
   strengths: string[]; // What's already good
-  opportunities: string[]; // What can be enhanced (never "problems")
+  opportunities: string[]; // What can be enhanced
   recommendations: string[]; // Specific actions
-  readyForMastering: boolean; // Always suggest enhancement
-  encouragement: string; // Positive message
+  readyForMastering: boolean; // Based on actual quality
+  encouragement: string; // Honest but constructive message
 }
 
 /**
@@ -24,8 +24,8 @@ export function analyzeMixQuality(analysis: AudioAnalysis): MixReviewResult {
   const opportunities: string[] = [];
   const recommendations: string[] = [];
 
-  // Calculate encouraging score (60-95 range - always room for improvement)
-  let baseScore = 65;
+  // Calculate honest score (40-95 range - realistic assessment)
+  let baseScore = 50; // Start lower for more honest grading
 
   // Analyze Loudness
   if (analysis.energyLevel > 0.7) {
@@ -87,17 +87,21 @@ export function analyzeMixQuality(analysis: AudioAnalysis): MixReviewResult {
     opportunities.push('Ready for final polish and refinement');
   }
 
-  // Cap score at 85 (always room for enhancement)
-  const finalScore = Math.min(85, baseScore);
+  // Cap score at 95 for very high quality mixes
+  const finalScore = Math.min(95, Math.max(40, baseScore)); // Range: 40-95
 
-  // Generate encouraging message based on score
+  // Generate honest but constructive message based on score
   let encouragement = '';
-  if (finalScore >= 80) {
-    encouragement = "Excellent starting point! Let's add that final professional polish.";
-  } else if (finalScore >= 70) {
-    encouragement = "Great work! A few enhancements will take this to the next level.";
+  if (finalScore >= 85) {
+    encouragement = "Outstanding mix! Just needs final mastering polish for perfection.";
+  } else if (finalScore >= 75) {
+    encouragement = "Great work! Some enhancements will take this to professional level.";
+  } else if (finalScore >= 65) {
+    encouragement = "Solid foundation. Enhancement will significantly improve clarity and impact.";
+  } else if (finalScore >= 55) {
+    encouragement = "Needs improvement. Sonic processing will help balance and clarity.";
   } else {
-    encouragement = "Good foundation! Some sonic optimization will really make this shine.";
+    encouragement = "Significant work needed. Professional enhancement is essential for this mix.";
   }
 
   return {
@@ -127,19 +131,29 @@ export function getScoreColor(score: number): string {
 }
 
 /**
- * Get score grade (always B or higher - encouraging)
+ * Get score grade (honest grading: A to D, no F)
  */
 export function getScoreGrade(score: number): string {
-  if (score >= 80) return 'A';
-  if (score >= 70) return 'B+';
-  return 'B';
+  if (score >= 90) return 'A+';
+  if (score >= 85) return 'A';
+  if (score >= 80) return 'A-';
+  if (score >= 75) return 'B+';
+  if (score >= 70) return 'B';
+  if (score >= 65) return 'B-';
+  if (score >= 60) return 'C+';
+  if (score >= 55) return 'C';
+  if (score >= 50) return 'C-';
+  if (score >= 45) return 'D+';
+  return 'D'; // Lowest grade (no F)
 }
 
 /**
- * Get encouraging score description
+ * Get honest score description
  */
 export function getScoreDescription(score: number): string {
-  if (score >= 80) return 'Excellent Mix Quality';
-  if (score >= 70) return 'Very Good Mix Quality';
-  return 'Good Mix Quality';
+  if (score >= 85) return 'Excellent Mix Quality';
+  if (score >= 75) return 'Very Good Mix Quality';
+  if (score >= 65) return 'Good Mix Quality';
+  if (score >= 55) return 'Fair Mix Quality';
+  return 'Needs Improvement';
 }
