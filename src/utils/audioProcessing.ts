@@ -662,10 +662,8 @@ export function applyUserAdjustments(
 }
 
 /**
- * Process audio file with intelligent mastering
- * Note: Real DSP processing (EQ, compression, saturation, harmonics) will be
- * implemented via server-side FFmpeg processing in future update.
- * Currently optimizes playback for immediate sonic enhancement.
+ * Process audio file with professional server-side FFmpeg DSP
+ * Applies studio-grade EQ, compression, saturation, harmonics, and limiting
  */
 export async function processAudioFile(
   inputUri: string,
@@ -674,26 +672,54 @@ export async function processAudioFile(
   genre: AudioGenre = 'unknown'
 ): Promise<void> {
   try {
-    console.log('🎵 Preparing audio for enhanced playback...');
-    
-    // Copy file for playback optimization
-    // Real DSP processing (EQ, compression, limiting, saturation) will be
-    // implemented in next version via server-side processing
-    await FileSystem.copyAsync({
-      from: inputUri,
-      to: outputUri,
-    });
-    
-    console.log('✅ Audio prepared with settings:', {
+    console.log('🎵 Uploading to server for professional FFmpeg processing...');
+    console.log('Settings:', {
       volumeBoost: Math.round(settings.volumeBoost * 100) + '%',
       brightness: Math.round(settings.brightness * 100) + '%',
       midRange: Math.round(settings.midRange * 100) + '%',
       bassBoost: Math.round(settings.bassBoost * 100) + '%',
       compression: Math.round(settings.compression * 100) + '%',
     });
+    
+    // Import API client dynamically to avoid circular dependency
+    const { apiClient } = await import('../api/backend');
+    
+    // Upload and process on server with FFmpeg DSP chain
+    const processedBlob = await apiClient.processAudio({
+      audioUri: inputUri,
+      settings,
+      genre,
+      format: 'mp3',
+    });
+    
+    console.log('✅ Server processing complete, saving file...');
+    
+    // Convert blob to base64 and save locally
+    const reader = new FileReader();
+    const base64Promise = new Promise<string>((resolve, reject) => {
+      reader.onloadend = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(processedBlob as any);
+    });
+    
+    const base64Data = await base64Promise;
+    await FileSystem.writeAsStringAsync(outputUri, base64Data, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    
+    console.log('✅ Professional audio mastering complete!');
   } catch (error) {
-    console.error('❌ Audio preparation failed:', error);
-    throw new Error('Failed to prepare audio file');
+    console.error('❌ Server-side processing failed:', error);
+    // Fallback: copy original file if server processing fails
+    console.log('⚠️  Falling back to original audio...');
+    await FileSystem.copyAsync({
+      from: inputUri,
+      to: outputUri,
+    });
+    throw new Error('Server processing failed: ' + (error as Error).message);
   }
 }
 
