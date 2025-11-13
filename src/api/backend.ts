@@ -170,6 +170,62 @@ class APIClient {
       body: JSON.stringify(updates),
     });
   }
+
+  /**
+   * Process audio file with server-side FFmpeg
+   * Professional DSP: EQ, compression, saturation, limiting
+   * 
+   * @param audioUri - Local file URI
+   * @param settings - MasteringSettings object
+   * @param genre - AudioGenre string
+   * @param format - 'mp3' or 'wav'
+   * @returns Processed audio file as blob
+   */
+  async processAudio(params: {
+    audioUri: string;
+    settings: any;
+    genre: string;
+    format: 'mp3' | 'wav';
+  }): Promise<Blob> {
+    const formData = new FormData();
+    
+    // Create file object from URI
+    const filename = params.audioUri.split('/').pop() || 'audio.mp3';
+    formData.append('file', {
+      uri: params.audioUri,
+      type: 'audio/mpeg',
+      name: filename,
+    } as any);
+    
+    formData.append('settings', JSON.stringify(params.settings));
+    formData.append('genre', params.genre);
+    formData.append('format', params.format);
+
+    const headers: Record<string, string> = {};
+    const token = await this.getToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    logInfo('Uploading audio for server-side processing...');
+
+    const response = await withTimeout(
+      fetch(`${API_URL}/audio/process`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      }),
+      120000, // 2 minute timeout for processing
+      'Audio processing timeout'
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Processing failed' }));
+      throw new Error(error.error || 'Audio processing failed');
+    }
+
+    return await response.blob();
+  }
 }
 
 // Export singleton instance
