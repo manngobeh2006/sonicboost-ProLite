@@ -435,19 +435,11 @@ export default function ResultsScreen() {
       // Reload audio for immediate playback
       setCurrentVersion('mastered');
       await loadAudio(mp3Uri, 'mastered');
+      
+      // Wait for state to update, then auto-play
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       Alert.alert('Success', 'Audio reprocessed with your adjustments!');
-      
-      // Auto-play the reprocessed audio
-      setTimeout(async () => {
-        if (sound) {
-          try {
-            await sound.playAsync();
-          } catch (e) {
-            console.log('Auto-play error:', e);
-          }
-        }
-      }, 300);
     } catch (error) {
       console.error('Reprocessing error:', error);
       Alert.alert('Error', 'Failed to reprocess audio. Please try again.');
@@ -545,6 +537,8 @@ export default function ResultsScreen() {
       setCurrentVersion('mastered');
       if (updatedFile?.masteredUri) {
         await loadAudio(updatedFile.masteredUri, 'mastered');
+        // Wait for audio to fully load before continuing
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
       setShowRevisionModal(false);
