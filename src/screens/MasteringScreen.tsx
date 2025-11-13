@@ -340,6 +340,9 @@ export default function MasteringScreen() {
       const wavUri = `${fileDir}${file.id}_mastered.wav`;
 
       // Process audio files with real FFmpeg DSP (EQ, compression, loudness)
+      setCurrentStage('🎛️ Professional mastering in progress...\n\nApplying studio-grade EQ, compression & limiting');
+      updateFile(file.id, { progress: 92 });
+      
       try {
         await processAudioFile(file.originalUri, mp3Uri, masteringSettings, analysisToUse.genre);
         await processAudioFile(file.originalUri, wavUri, masteringSettings, analysisToUse.genre);
