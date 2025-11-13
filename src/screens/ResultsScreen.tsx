@@ -71,7 +71,7 @@ export default function ResultsScreen() {
     };
   }, [sound, currentFileId, fileId]);
 
-  const loadAudio = async (uri: string, version: AudioVersion) => {
+  const loadAudio = async (uri: string, version: AudioVersion): Promise<Audio.Sound | null> => {
     try {
       // CRITICAL: Stop any globally playing audio first (prevents multiple audio playback)
       await stopGlobalAudio();
@@ -125,12 +125,16 @@ export default function ResultsScreen() {
         setDuration(status.durationMillis);
       }
       setIsLoading(false);
+      
+      // Return the sound object so callers can use it immediately
+      return newSound;
     } catch (error) {
       if (__DEV__) {
         console.warn('Audio load warning:', (error as Error)?.message);
       }
       Alert.alert('Error', 'Failed to load audio. Please try again.');
       setIsLoading(false);
+      return null;
     }
   };
 
@@ -432,12 +436,25 @@ export default function ResultsScreen() {
         masteringSettings: adjustedSettings,
       });
 
-      // Reload audio for immediate playback
+      // Reload audio and get sound object directly
       setCurrentVersion('mastered');
-      await loadAudio(mp3Uri, 'mastered');
+      const newSound = await loadAudio(mp3Uri, 'mastered');
       
-      // Wait for state to update, then auto-play
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Auto-play the newly loaded audio
+      if (newSound) {
+        try {
+          // Verify sound is loaded before playing
+          const status = await newSound.getStatusAsync();
+          if (status.isLoaded) {
+            await newSound.playAsync();
+            setGlobalIsPlaying(true);
+          } else {
+            console.warn('Sound not loaded, cannot auto-play');
+          }
+        } catch (playError) {
+          console.warn('Auto-play failed:', playError);
+        }
+      }
 
       Alert.alert('Success', 'Audio reprocessed with your adjustments!');
     } catch (error) {
@@ -533,12 +550,27 @@ export default function ResultsScreen() {
       // Get fresh file reference after update
       const updatedFile = useAudioStore.getState().files.find(f => f.id === file.id);
       
-      // Reload the audio player with updated file
+      // Reload the audio player with updated file and get sound object
       setCurrentVersion('mastered');
+      let newSound: Audio.Sound | null = null;
       if (updatedFile?.masteredUri) {
-        await loadAudio(updatedFile.masteredUri, 'mastered');
-        // Wait for audio to fully load before continuing
-        await new Promise(resolve => setTimeout(resolve, 500));
+        newSound = await loadAudio(updatedFile.masteredUri, 'mastered');
+      }
+      
+      // Auto-play the newly loaded audio
+      if (newSound) {
+        try {
+          // Verify sound is loaded before playing
+          const status = await newSound.getStatusAsync();
+          if (status.isLoaded) {
+            await newSound.playAsync();
+            setGlobalIsPlaying(true);
+          } else {
+            console.warn('Sound not loaded, cannot auto-play after revision');
+          }
+        } catch (playError) {
+          console.warn('Auto-play after revision failed:', playError);
+        }
       }
 
       setShowRevisionModal(false);
