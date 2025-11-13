@@ -404,6 +404,18 @@ export default function ResultsScreen() {
       return;
     }
 
+    // Check revision limit (shared with AI revisions)
+    const revisionsUsed = (file as any).revisionUsed || 0;
+    const maxRevisions = 2; // Unlimited tier gets 2 total revisions
+    
+    if (revisionsUsed >= maxRevisions) {
+      Alert.alert(
+        'Revision Limit Reached',
+        `You've used all ${maxRevisions} revisions for this song.\n\nTip: Process the file again to get ${maxRevisions} more revisions!`
+      );
+      return;
+    }
+
     // Stop any currently playing audio
     await stopGlobalAudio();
 
@@ -437,12 +449,14 @@ export default function ResultsScreen() {
       await processAudioFile(file.originalUri, mp3Uri, adjustedSettings, genre);
       await processAudioFile(file.originalUri, wavUri, adjustedSettings, genre);
 
-      // Update file store with new URIs and settings
+      // Update file store with new URIs, settings, and increment revision count
+      const updatedRevisionsCount = revisionsUsed + 1;
       useAudioStore.getState().updateFile(file.id, {
         masteredUri: mp3Uri,
         masteredMp3Uri: mp3Uri,
         masteredWavUri: wavUri,
         masteringSettings: adjustedSettings,
+        revisionUsed: updatedRevisionsCount,
       });
 
       // Wait for file system to complete write
@@ -492,7 +506,11 @@ export default function ResultsScreen() {
         console.error('❌ loadAudio returned null');
       }
 
-      Alert.alert('Success', 'Audio reprocessed with your adjustments!');
+      const remaining = maxRevisions - updatedRevisionsCount;
+      Alert.alert(
+        'Success!',
+        `Manual adjustments applied!\n\n${remaining} revision${remaining !== 1 ? 's' : ''} remaining for this song.`
+      );
     } catch (error) {
       console.error('Reprocessing error:', error);
       Alert.alert('Error', 'Failed to reprocess audio. Please try again.');
