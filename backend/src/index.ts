@@ -5,6 +5,7 @@ import stripeRoutes from './routes/stripe';
 import subscriptionRoutes from './routes/subscription';
 import usageRoutes from './routes/usage';
 import authRoutes from './routes/auth';
+import audioRoutes from './routes/audio';
 import { securityHeaders, apiLimiter } from './middleware/security';
 
 dotenv.config();
@@ -62,6 +63,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/usage', usageRoutes);
+app.use('/api/audio', audioRoutes);
 
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
