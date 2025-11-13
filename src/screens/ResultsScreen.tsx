@@ -46,6 +46,7 @@ export default function ResultsScreen() {
   const [justPurchasedOneTime, setJustPurchasedOneTime] = useState(false);
   const [userAdjustments, setUserAdjustments] = useState<UserAudioAdjustments>(INITIAL_ADJUSTMENTS);
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const [revisionTab, setRevisionTab] = useState<'ai' | 'manual'>('ai');
 
   const isPro = user?.subscriptionTier === 'pro' || user?.subscriptionStatus === 'pro';
   const isUnlimited = user?.subscriptionTier === 'unlimited' || user?.subscriptionStatus === 'unlimited';
@@ -1021,19 +1022,9 @@ export default function ResultsScreen() {
           )}
         </View>
 
-        {/* Manual Controls (Unlimited Only) */}
-        {isUnlimited && file.status === 'completed' && (
-          <UserAudioControls
-            adjustments={userAdjustments}
-            onAdjustmentsChange={setUserAdjustments}
-            onReprocess={handleReprocessWithAdjustments}
-            isProcessing={isReprocessing}
-          />
-        )}
-
         {/* Quick Actions */}
         <View className="mx-6 mb-8">
-          {/* AI Revision (Unlimited Only) */}
+          {/* Revision Feature (Unlimited Only) - Combines AI and Manual */}
           {isUnlimited && (() => {
             const revisionsUsed = (file as any).revisionUsed || 0;
             const maxRevisions = 2;
@@ -1044,11 +1035,11 @@ export default function ResultsScreen() {
                 onPress={() => setShowRevisionModal(true)}
                 className="bg-blue-600 rounded-2xl py-4 items-center mb-3 active:opacity-80"
               >
-                <Text className="text-white text-base font-semibold">✨ AI Revision</Text>
+                <Text className="text-white text-base font-semibold">🎚️ Revise Enhancement</Text>
                 <Text className="text-blue-200 text-xs mt-1">
                   {remaining > 0 
-                    ? `${remaining} revision${remaining !== 1 ? 's' : ''} remaining for this song`
-                    : 'No revisions left for this song'}
+                    ? `AI revisions: ${remaining}/${maxRevisions} remaining • Manual controls available`
+                    : 'AI revisions used • Manual controls still available'}
                 </Text>
               </Pressable>
             );
@@ -1204,7 +1195,7 @@ export default function ResultsScreen() {
         </Pressable>
       </Modal>
 
-      {/* Revision Modal */}
+      {/* Unified Revision Modal with Tabs */}
       <Modal
         visible={showRevisionModal}
         transparent
@@ -1212,25 +1203,86 @@ export default function ResultsScreen() {
         onRequestClose={() => setShowRevisionModal(false)}
       >
         <Pressable className="flex-1 bg-black/80 items-center justify-center px-6" onPress={() => setShowRevisionModal(false)}>
-          <Pressable className="bg-gray-900 rounded-3xl p-8 w-full max-w-sm border border-gray-800" onPress={(e) => e.stopPropagation()}>
-            <Text className="text-white text-xl font-bold mb-3 text-center">AI Revision</Text>
-            <Text className="text-gray-400 text-xs mb-4 text-center">Describe one change (e.g., "boost 2kHz by 3dB" or "more bass")</Text>
-            <TextInput
-              value={revisionCommand}
-              onChangeText={setRevisionCommand}
-              placeholder="e.g., increase brightness by 20%"
-              placeholderTextColor="#6B7280"
-              className="bg-gray-800 text-white px-4 py-3 rounded-xl mb-4"
-              editable={!isRunningRevision}
-            />
-            <Pressable
-              onPress={runRevision}
-              disabled={isRunningRevision || !revisionCommand.trim()}
-              className={`rounded-2xl py-4 items-center mb-2 ${isRunningRevision || !revisionCommand.trim() ? 'bg-gray-700' : 'bg-blue-600'}`}
-            >
-              {isRunningRevision ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-semibold">Apply Revision</Text>}
-            </Pressable>
-            <Pressable onPress={() => setShowRevisionModal(false)} className="py-2 items-center">
+          <Pressable className="bg-gray-900 rounded-3xl p-6 w-full max-w-md border border-gray-800" onPress={(e) => e.stopPropagation()}>
+            <Text className="text-white text-xl font-bold mb-4 text-center">🎚️ Revise Enhancement</Text>
+            
+            {/* Tab Switcher */}
+            <View className="flex-row bg-gray-800 rounded-xl p-1 mb-4">
+              <Pressable
+                onPress={() => setRevisionTab('ai')}
+                className={`flex-1 py-3 rounded-lg ${revisionTab === 'ai' ? 'bg-blue-600' : 'bg-transparent'}`}
+              >
+                <Text className={`text-center font-semibold ${revisionTab === 'ai' ? 'text-white' : 'text-gray-400'}`}>
+                  ✨ AI
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setRevisionTab('manual')}
+                className={`flex-1 py-3 rounded-lg ${revisionTab === 'manual' ? 'bg-blue-600' : 'bg-transparent'}`}
+              >
+                <Text className={`text-center font-semibold ${revisionTab === 'manual' ? 'text-white' : 'text-gray-400'}`}>
+                  🎹 Manual
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* AI Tab Content */}
+            {revisionTab === 'ai' && (
+              <View>
+                <Text className="text-gray-400 text-xs mb-3 text-center">
+                  Describe one change (e.g., "boost 2kHz by 3dB" or "more bass")
+                </Text>
+                <TextInput
+                  value={revisionCommand}
+                  onChangeText={setRevisionCommand}
+                  placeholder="e.g., increase brightness by 20%"
+                  placeholderTextColor="#6B7280"
+                  className="bg-gray-800 text-white px-4 py-3 rounded-xl mb-4"
+                  editable={!isRunningRevision}
+                />
+                <Pressable
+                  onPress={runRevision}
+                  disabled={isRunningRevision || !revisionCommand.trim()}
+                  className={`rounded-2xl py-4 items-center mb-2 ${isRunningRevision || !revisionCommand.trim() ? 'bg-gray-700' : 'bg-blue-600'}`}
+                >
+                  {isRunningRevision ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="text-white font-semibold">Apply AI Revision</Text>
+                  )}
+                </Pressable>
+                {(() => {
+                  const revisionsUsed = (file as any).revisionUsed || 0;
+                  const maxRevisions = 2;
+                  const remaining = maxRevisions - revisionsUsed;
+                  return (
+                    <Text className="text-gray-400 text-xs text-center mb-2">
+                      {remaining} AI revision{remaining !== 1 ? 's' : ''} remaining
+                    </Text>
+                  );
+                })()}
+              </View>
+            )}
+
+            {/* Manual Tab Content */}
+            {revisionTab === 'manual' && (
+              <ScrollView className="max-h-96">
+                <Text className="text-gray-400 text-xs mb-4 text-center">
+                  Fine-tune your audio with precise controls
+                </Text>
+                <UserAudioControls
+                  adjustments={userAdjustments}
+                  onAdjustmentsChange={setUserAdjustments}
+                  onReprocess={() => {
+                    setShowRevisionModal(false);
+                    handleReprocessWithAdjustments();
+                  }}
+                  isProcessing={isReprocessing}
+                />
+              </ScrollView>
+            )}
+
+            <Pressable onPress={() => setShowRevisionModal(false)} className="py-3 items-center mt-2">
               <Text className="text-gray-400 text-sm">Cancel</Text>
             </Pressable>
           </Pressable>
