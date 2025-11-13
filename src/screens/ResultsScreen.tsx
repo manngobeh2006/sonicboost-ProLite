@@ -157,8 +157,16 @@ export default function ResultsScreen() {
     if (!sound) {
       const uri = currentVersion === 'original' ? file?.originalUri : file?.masteredUri;
       if (uri) {
-        await loadAudio(uri, currentVersion);
-        // The sound is now loaded, we need to get it and play
+        const newSound = await loadAudio(uri, currentVersion);
+        // Auto-play the newly loaded sound
+        if (newSound) {
+          try {
+            await newSound.playAsync();
+            setGlobalIsPlaying(true);
+          } catch (playError) {
+            console.warn('Auto-play failed:', playError);
+          }
+        }
         return;
       }
       return;
@@ -436,23 +444,30 @@ export default function ResultsScreen() {
         masteringSettings: adjustedSettings,
       });
 
+      // Wait for file system to complete write
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       // Reload audio and get sound object directly
       setCurrentVersion('mastered');
       const newSound = await loadAudio(mp3Uri, 'mastered');
       
-      // Auto-play the newly loaded audio
+      // Auto-play the newly loaded audio after a brief delay
       if (newSound) {
+        // Small delay to ensure sound is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
         try {
           // Verify sound is loaded before playing
           const status = await newSound.getStatusAsync();
           if (status.isLoaded) {
             await newSound.playAsync();
+            setIsPlaying(true);
             setGlobalIsPlaying(true);
+            console.log('✅ Auto-playing reprocessed audio');
           } else {
-            console.warn('Sound not loaded, cannot auto-play');
+            console.warn('Sound not loaded after reprocessing');
           }
         } catch (playError) {
-          console.warn('Auto-play failed:', playError);
+          console.error('Auto-play failed:', playError);
         }
       }
 
@@ -544,8 +559,8 @@ export default function ResultsScreen() {
         revisionUsed: updatedRevisionsCount 
       });
 
-      // Give a moment for file system to flush the reprocessed audio
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for file system to complete write
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // Get fresh file reference after update
       const updatedFile = useAudioStore.getState().files.find(f => f.id === file.id);
@@ -557,19 +572,23 @@ export default function ResultsScreen() {
         newSound = await loadAudio(updatedFile.masteredUri, 'mastered');
       }
       
-      // Auto-play the newly loaded audio
+      // Auto-play the newly loaded audio after brief delay
       if (newSound) {
+        // Small delay to ensure sound is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
         try {
           // Verify sound is loaded before playing
           const status = await newSound.getStatusAsync();
           if (status.isLoaded) {
             await newSound.playAsync();
+            setIsPlaying(true);
             setGlobalIsPlaying(true);
+            console.log('✅ Auto-playing revised audio');
           } else {
-            console.warn('Sound not loaded, cannot auto-play after revision');
+            console.warn('Sound not loaded after revision');
           }
         } catch (playError) {
-          console.warn('Auto-play after revision failed:', playError);
+          console.error('Auto-play after revision failed:', playError);
         }
       }
 
