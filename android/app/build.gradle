@@ -153,6 +153,7 @@ android {
 }
 
 repositories {
+    maven { url 'https://jitpack.io' }
     mavenCentral()
 }
 
@@ -160,8 +161,8 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     
-    // FFmpeg Kit - Use actual library with native binaries
-    implementation 'com.arthenica:ffmpeg-kit-audio:6.0-2'
+    // FFmpeg Kit - Use actual library with native binaries from JitPack
+    implementation 'com.arthenica:mobile-ffmpeg-audio:4.4.LTS'
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
