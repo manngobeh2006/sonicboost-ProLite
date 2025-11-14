@@ -357,4 +357,70 @@ router.patch('/profile', authenticateToken, sanitizeInputs, async (req: Request,
   }
 });
 
+// Delete account (GDPR compliance)
+router.delete('/account', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const { password } = req.body;
+
+    if (!password) {
+      res.status(400).json({ success: false, error: 'Password is required to delete account' });
+      return;
+    }
+
+    // Get user to verify password
+    const { data: user, error: getUserError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (getUserError || !user) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+
+    // Verify password before deleting
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+      res.status(401).json({ success: false, error: 'Incorrect password' });
+      return;
+    }
+
+    // Cancel active Stripe subscription if exists
+    if (user.subscription_id) {
+      try {
+        const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+        await stripe.subscriptions.cancel(user.subscription_id);
+        console.log(`Cancelled Stripe subscription: ${user.subscription_id}`);
+      } catch (stripeError) {
+        console.error('Failed to cancel Stripe subscription:', stripeError);
+        // Continue with deletion even if Stripe cancel fails
+      }
+    }
+
+    // Delete user data from database
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', userId);
+
+    if (deleteError) {
+      console.error('Account deletion error:', deleteError);
+      res.status(500).json({ success: false, error: 'Failed to delete account' });
+      return;
+    }
+
+    console.log(`Account deleted for user: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Your account and all associated data have been permanently deleted.'
+    });
+  } catch (error: any) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to delete account' });
+  }
+});
+
 export default router;
