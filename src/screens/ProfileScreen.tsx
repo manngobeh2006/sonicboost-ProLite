@@ -19,6 +19,7 @@ export default function ProfileScreen() {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   // Auto-refresh user data when screen comes into focus
   useFocusEffect(
@@ -139,6 +140,72 @@ export default function ProfileScreen() {
               setLoading(false);
             }
           }
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all data. This action cannot be undone.\n\nTo confirm, please enter your password:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            // Show password input dialog
+            Alert.prompt(
+              'Enter Password',
+              'Enter your password to confirm account deletion:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete Account',
+                  style: 'destructive',
+                  onPress: async (password) => {
+                    if (!password || !password.trim()) {
+                      Alert.alert('Error', 'Password is required');
+                      return;
+                    }
+
+                    setIsDeletingAccount(true);
+                    try {
+                      const result = await apiClient.deleteAccount(password.trim());
+                      
+                      if (result.success) {
+                        Alert.alert(
+                          'Account Deleted',
+                          result.message || 'Your account has been permanently deleted.',
+                          [
+                            {
+                              text: 'OK',
+                              onPress: async () => {
+                                // Logout user
+                                await logout();
+                              },
+                            },
+                          ]
+                        );
+                      } else {
+                        Alert.alert('Error', result.error || 'Failed to delete account');
+                      }
+                    } catch (error: any) {
+                      console.error('Delete account error:', error);
+                      Alert.alert(
+                        'Error',
+                        error.message || 'Failed to delete account. Please try again.'
+                      );
+                    } finally {
+                      setIsDeletingAccount(false);
+                    }
+                  },
+                },
+              ],
+              'secure-text'
+            );
+          },
         },
       ]
     );
@@ -436,14 +503,33 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        {/* Logout Button */}
+        {/* Danger Zone */}
         <View className="mx-6 mb-8">
+          <Text className="text-white text-lg font-semibold mb-4">Danger Zone</Text>
+          
+          {/* Delete Account Button */}
+          <Pressable
+            onPress={handleDeleteAccount}
+            disabled={isDeletingAccount}
+            className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex-row items-center justify-center mb-3 active:opacity-70"
+          >
+            {isDeletingAccount ? (
+              <ActivityIndicator size="small" color="#EF4444" />
+            ) : (
+              <>
+                <Ionicons name="trash" size={20} color="#EF4444" />
+                <Text className="text-red-500 text-base font-semibold ml-2">Delete Account</Text>
+              </>
+            )}
+          </Pressable>
+          
+          {/* Logout Button */}
           <Pressable
             onPress={handleLogout}
-            className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex-row items-center justify-center active:opacity-70"
+            className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex-row items-center justify-center active:opacity-70"
           >
-            <Ionicons name="log-out" size={20} color="#EF4444" />
-            <Text className="text-red-500 text-base font-semibold ml-2">Logout</Text>
+            <Ionicons name="log-out" size={20} color="#9CA3AF" />
+            <Text className="text-gray-400 text-base font-semibold ml-2">Logout</Text>
           </Pressable>
         </View>
       </ScrollView>

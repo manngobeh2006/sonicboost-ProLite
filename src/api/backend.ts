@@ -171,6 +171,14 @@ class APIClient {
     });
   }
 
+  // Delete account (GDPR compliance)
+  async deleteAccount(password: string) {
+    return await this.request('/auth/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    });
+  }
+
   /**
    * Process audio file with server-side FFmpeg
    * Professional DSP: EQ, compression, saturation, limiting
